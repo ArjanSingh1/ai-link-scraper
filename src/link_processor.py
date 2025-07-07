@@ -6,6 +6,7 @@ from datetime import datetime
 from src.web_scraper import WebScraper
 from src.summarizer import Summarizer
 from src.google_drive_client import GoogleDriveClient
+from src.pdf_generator import create_pdf_report
 
 logger = logging.getLogger(__name__)
 
@@ -67,12 +68,14 @@ class LinkProcessor:
             csv_file = self._save_as_csv(processed_items, output_folder)
             json_file = self._save_as_json(processed_items, output_folder)
             html_file = self._save_as_html(processed_items, output_folder)
+            pdf_file = self._save_as_pdf(processed_items, output_folder)
             
             return {
                 'processed_items': processed_items,
                 'csv_file': csv_file,
                 'json_file': json_file,
                 'html_file': html_file,
+                'pdf_file': pdf_file,
                 'total_processed': len(processed_items)
             }
             
@@ -134,6 +137,17 @@ class LinkProcessor:
                 if html_result:
                     self.drive_client.make_file_public(html_result['file_id'])
                     upload_results['html'] = html_result
+            
+            # Upload PDF file
+            if processed_data.get('pdf_file'):
+                pdf_result = self.drive_client.upload_file(
+                    processed_data['pdf_file'], 
+                    folder_id,
+                    f"scraped_links_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+                )
+                if pdf_result:
+                    self.drive_client.make_file_public(pdf_result['file_id'])
+                    upload_results['pdf'] = pdf_result
             
             # Get folder link
             folder_link = self.drive_client.get_folder_link(folder_id)
@@ -335,4 +349,31 @@ class LinkProcessor:
             
         except Exception as e:
             logger.error(f"Error saving HTML: {str(e)}")
+            return None
+    
+    def _save_as_pdf(self, items, output_folder):
+        """Save processed items as a beautifully formatted PDF"""
+        try:
+            pdf_file = os.path.join(output_folder, f"scraped_links_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf")
+            
+            # Create PDF title
+            title = f"AI Link Collection Report - {datetime.now().strftime('%Y-%m-%d')}"
+            
+            # Generate PDF report
+            success = create_pdf_report(
+                data=items,
+                output_path=pdf_file,
+                title=title,
+                include_content=True
+            )
+            
+            if success:
+                logger.info(f"Saved PDF: {pdf_file}")
+                return pdf_file
+            else:
+                logger.error("Failed to generate PDF report")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error saving PDF: {str(e)}")
             return None

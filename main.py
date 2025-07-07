@@ -105,13 +105,19 @@ def parse_arguments():
     parser.add_argument(
         '--scrape-to-drive',
         action='store_true',
-        help='Scrape all links (without summarizing) and upload to Google Drive as CSV/JSON/HTML'
+        help='Scrape all links (without summarizing) and upload to Google Drive as CSV/JSON/HTML/PDF'
     )
     
     parser.add_argument(
         '--drive-folder-name',
         type=str,
         help='Custom folder name for Google Drive upload (default: auto-generated with timestamp)'
+    )
+    
+    parser.add_argument(
+        '--pdf-detailed',
+        action='store_true',
+        help='Include full content in PDF report (default: includes content previews)'
     )
     
     return parser.parse_args()
@@ -228,8 +234,12 @@ def main():
                         logger.info(f"📁 Google Drive folder: {upload_result['folder_link']}")
                     if upload_result.get('csv'):
                         logger.info(f"📊 CSV file: {upload_result['csv']['web_link']}")
+                    if upload_result.get('json'):
+                        logger.info(f"📄 JSON file: {upload_result['json']['web_link']}")
                     if upload_result.get('html'):
                         logger.info(f"🌐 HTML report: {upload_result['html']['web_link']}")
+                    if upload_result.get('pdf'):
+                        logger.info(f"📋 PDF report: {upload_result['pdf']['web_link']}")
                     return 0
                 else:
                     logger.error("Failed to upload to Google Drive")

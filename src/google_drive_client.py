@@ -98,6 +98,8 @@ class GoogleDriveClient:
                 mime_type = 'text/html'
             elif file_path.endswith('.md'):
                 mime_type = 'text/markdown'
+            elif file_path.endswith('.pdf'):
+                mime_type = 'application/pdf'
             else:
                 mime_type = 'text/plain'
             
