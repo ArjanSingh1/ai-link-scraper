@@ -50,26 +50,37 @@ python main.py --share-all-summaries
 python main.py --send-to-slack --share-all-summaries --verbose
 
 # NEW: Check for mentions and respond immediately
-python main.py --check-mentions
+python main.py --check-mentions              # Check configured channel only
+python main.py --check-all-channels         # Check ALL accessible channels
 ```
 
-## 🤖 New Mention Feature
+## 🤖 Enhanced Mention Feature
 
-Your bot now responds to mentions! 
+Your bot now responds to mentions **across ALL channels** it has access to!
 
 ### How to Use:
-1. **Share a link with mention**: `@ailinkscraper https://example.com/article`
+1. **Share a link with mention**: `@ailinkscraper https://example.com/article` (in any channel)
 2. **Get instant summary**: Bot will immediately scrape and summarize the link
-3. **Automatic responses**: Every 30 minutes during business hours (9 AM - 6 PM UTC)
+3. **Automatic responses**: Every 15 minutes, 7 AM - 10 PM EST (extended hours)
 
 ### Mention Commands:
-- `@ailinkscraper` + any link = Instant summary
+- `@ailinkscraper` + any link = Instant summary (works in any channel)
 - `@ailinkscraper` alone = Help message with usage instructions
 
-### Scheduling:
-- **Weekly scraping**: Every Monday at 1 PM UTC (GitHub Actions)
-- **Mention checking**: Every 30 minutes during business hours (GitHub Actions)
+### Enhanced Scheduling:
+- **Weekly scraping**: Every Monday at 1:05 PM EST (6:05 PM UTC)
+- **Mention checking**: Every 15 minutes, 7 AM - 10 PM EST (across ALL channels)
 - **Manual trigger**: Available anytime through GitHub Actions
+
+### Required Bot Permissions:
+Your Slack bot needs these scopes for full functionality:
+- `channels:history` - Read messages from public channels
+- `groups:history` - Read messages from private channels  
+- `channels:read` - Get channel information
+- `groups:read` - Get private channel information
+- `chat:write` - Send messages
+- `files:write` - Upload files
+- `links:read` - Handle links
 
 ## 📋 Slack Setup Checklist
 

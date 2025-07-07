@@ -90,6 +90,12 @@ def parse_arguments():
         help='Check for recent mentions and respond with link summaries'
     )
     
+    parser.add_argument(
+        '--check-all-channels',
+        action='store_true',
+        help='Check for mentions across all accessible channels (not just the configured channel)'
+    )
+    
     return parser.parse_args()
 
 def parse_date(date_string):
@@ -145,9 +151,15 @@ def main():
         
         # Handle mention checking (separate from regular processing)
         if args.check_mentions:
-            logger.info("Checking for recent mentions...")
+            logger.info("Checking for recent mentions in configured channel...")
             mentions_processed = slack_client.check_for_mentions()
             logger.info(f"Processed {mentions_processed} mentions")
+            return 0
+        
+        if args.check_all_channels:
+            logger.info("Checking for recent mentions across all accessible channels...")
+            mentions_processed = slack_client.check_all_channels_for_mentions()
+            logger.info(f"Processed {mentions_processed} mentions across all channels")
             return 0
         
         # Regular processing continues below...

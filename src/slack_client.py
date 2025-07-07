@@ -256,6 +256,85 @@ class SlackClient:
             logger.error(f"Error in share_complete_summary_folder: {str(e)}")
             return None
     
+    def get_all_channels(self):
+        """Get list of all channels the bot has access to"""
+        try:
+            response = self.client.conversations_list(
+                types="public_channel,private_channel",
+                limit=1000
+            )
+            channels = response.get('channels', [])
+            logger.info(f"Found {len(channels)} accessible channels")
+            return channels
+        except SlackApiError as e:
+            logger.error(f"Error getting channels: {e.response['error']}")
+            return []
+    
+    def check_all_channels_for_mentions(self, limit=50):
+        """Check all accessible channels for mentions and respond"""
+        try:
+            bot_user_id = self.get_bot_user_id()
+            if not bot_user_id:
+                logger.error("Could not get bot user ID")
+                return 0
+            
+            channels = self.get_all_channels()
+            total_mentions_processed = 0
+            
+            # Get recent messages (last 2 hours to catch mentions)
+            from datetime import datetime, timedelta
+            two_hours_ago = datetime.now() - timedelta(hours=2)
+            
+            for channel in channels:
+                channel_id = channel['id']
+                channel_name = channel.get('name', 'Unknown')
+                
+                logger.info(f"Checking channel #{channel_name} for mentions...")
+                
+                try:
+                    # Temporarily switch to this channel
+                    original_channel = self.channel_id
+                    self.channel_id = channel_id
+                    
+                    # Get messages from this channel
+                    messages = self.get_channel_messages(
+                        start_date=two_hours_ago,
+                        limit=limit
+                    )
+                    
+                    channel_mentions = 0
+                    for message in messages:
+                        # Skip bot's own messages
+                        if message.get('user') == bot_user_id:
+                            continue
+                        
+                        message_text = message.get('text', '')
+                        
+                        if self.is_mention(message_text, bot_user_id):
+                            logger.info(f"Found mention in #{channel_name}: {message.get('ts')}")
+                            self.respond_to_mention(message, bot_user_id)
+                            channel_mentions += 1
+                            total_mentions_processed += 1
+                    
+                    if channel_mentions > 0:
+                        logger.info(f"Processed {channel_mentions} mentions in #{channel_name}")
+                    
+                    # Restore original channel
+                    self.channel_id = original_channel
+                    
+                except Exception as e:
+                    logger.error(f"Error checking channel #{channel_name}: {str(e)}")
+                    # Restore original channel on error
+                    self.channel_id = original_channel
+                    continue
+            
+            logger.info(f"Total mentions processed across all channels: {total_mentions_processed}")
+            return total_mentions_processed
+            
+        except Exception as e:
+            logger.error(f"Error checking all channels for mentions: {str(e)}")
+            return 0
+
     def get_bot_user_id(self):
         """Get the bot's user ID for mention detection"""
         try:

@@ -2,9 +2,11 @@ name: Weekly AI Link Scraper
 
 on:
   schedule:
-    # Runs every Monday at 1 PM UTC (adjust timezone as needed)
-    - cron: '0 13 * * 1'
+    # Runs every Monday at 1:05 PM EST (6:05 PM UTC)
+    - cron: '5 18 * * 1'
   workflow_dispatch: # Allows manual runs from GitHub UI
+  repository_dispatch:
+    types: [mention-detected] # Triggered when bot is mentioned
 
 jobs:
   scrape-links:
@@ -58,7 +60,12 @@ jobs:
       run: |
         echo "Starting weekly AI link scraper..."
         
-        # Scrape links from the past week and send to Slack
+        # First check for any recent mentions across all channels
+        echo "Checking for mentions across all channels..."
+        python main.py --check-all-channels --verbose
+        
+        # Then do the regular weekly scraping of the configured channel
+        echo "Processing weekly links from configured channel..."
         if python main.py --start-date $(date -d '7 days ago' +%Y-%m-%d) --send-to-slack --verbose; then
             echo "✅ Weekly scraping completed successfully!"
         else
