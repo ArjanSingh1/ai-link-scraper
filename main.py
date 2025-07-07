@@ -102,6 +102,18 @@ def parse_arguments():
         help='Create a weekly summary document (PDF/HTML) with all summaries from the past week'
     )
     
+    parser.add_argument(
+        '--scrape-to-drive',
+        action='store_true',
+        help='Scrape all links (without summarizing) and upload to Google Drive as CSV/JSON/HTML'
+    )
+    
+    parser.add_argument(
+        '--drive-folder-name',
+        type=str,
+        help='Custom folder name for Google Drive upload (default: auto-generated with timestamp)'
+    )
+    
     return parser.parse_args()
 
 def parse_date(date_string):
@@ -167,6 +179,64 @@ def main():
             mentions_processed = slack_client.check_all_channels_for_mentions()
             logger.info(f"Processed {mentions_processed} mentions across all channels")
             return 0
+        
+        # Handle Google Drive scraping (separate from regular processing)
+        if args.scrape_to_drive:
+            logger.info("Scraping links for Google Drive export...")
+            from src.link_processor import LinkProcessor
+            
+            # Fetch messages from Slack
+            logger.info("Fetching messages from Slack...")
+            messages = slack_client.get_channel_messages(
+                start_date=start_date,
+                end_date=end_date,
+                limit=args.limit
+            )
+            
+            if not messages:
+                logger.warning("No messages found in the specified time range")
+                return 0
+            
+            # Extract links from messages
+            logger.info("Extracting links from messages...")
+            links_data = slack_client.extract_links_from_messages(messages)
+            
+            if not links_data:
+                logger.warning("No links found in messages")
+                return 0
+            
+            # Limit number of links to process
+            if len(links_data) > args.max_links:
+                logger.info(f"Limiting to {args.max_links} links (found {len(links_data)})")
+                links_data = links_data[:args.max_links]
+            
+            # Process links for Google Drive
+            processor = LinkProcessor()
+            processed_data = processor.scrape_links_for_drive(links_data, 'scraped_links')
+            
+            if processed_data:
+                # Upload to Google Drive
+                upload_result = processor.upload_to_google_drive(
+                    processed_data, 
+                    args.drive_folder_name or "ai-link-scraper"
+                )
+                
+                if upload_result:
+                    logger.info("=== GOOGLE DRIVE EXPORT COMPLETE ===")
+                    logger.info(f"Total links processed: {upload_result['total_items']}")
+                    if upload_result.get('folder_link'):
+                        logger.info(f"📁 Google Drive folder: {upload_result['folder_link']}")
+                    if upload_result.get('csv'):
+                        logger.info(f"📊 CSV file: {upload_result['csv']['web_link']}")
+                    if upload_result.get('html'):
+                        logger.info(f"🌐 HTML report: {upload_result['html']['web_link']}")
+                    return 0
+                else:
+                    logger.error("Failed to upload to Google Drive")
+                    return 1
+            else:
+                logger.error("Failed to process links for Google Drive")
+                return 1
         
         # Regular processing continues below...
         

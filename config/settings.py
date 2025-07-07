@@ -12,6 +12,9 @@ class Settings:
     # OpenAI Configuration
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     
+    # Google Drive Configuration
+    GOOGLE_DRIVE_FOLDER_ID = os.getenv('GOOGLE_DRIVE_FOLDER_ID')  # Optional: specific folder ID
+    
     # General Configuration
     OUTPUT_FOLDER = os.getenv('OUTPUT_FOLDER', 'summaries')
     MAX_LINKS_PER_RUN = int(os.getenv('MAX_LINKS_PER_RUN', 50))

@@ -52,6 +52,10 @@ python main.py --send-to-slack --share-all-summaries --verbose
 # NEW: Check for mentions and respond immediately
 python main.py --check-mentions              # Check configured channel only
 python main.py --check-all-channels         # Check ALL accessible channels
+
+# NEW: Scrape all links to Google Drive (no AI summarization)
+python main.py --scrape-to-drive             # Export all recent links as CSV/JSON/HTML
+python main.py --scrape-to-drive --drive-folder-name "Weekly Export"
 ```
 
 ## 🔄 Persistent Daemon Mode (NEW!)
