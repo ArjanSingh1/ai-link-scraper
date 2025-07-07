@@ -2,9 +2,8 @@ name: AI Link Scraper - Mention Response
 
 on:
   schedule:
-    # Check for mentions every 15 minutes during extended hours (7 AM - 10 PM EST = 12 PM - 3 AM UTC)
-    - cron: '*/15 12-23 * * *'  # 12 PM - 11:45 PM UTC
-    - cron: '*/15 0-3 * * *'    # 12 AM - 3:45 AM UTC (next day)
+    # Check for mentions every 10 minutes (1:00, 1:10, 1:20, 1:30, etc.)
+    - cron: '*/10 * * * *'
   workflow_dispatch: # Manual trigger
   repository_dispatch:
     types: [check-mentions] # Can be triggered externally
