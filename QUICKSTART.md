@@ -2,7 +2,7 @@
 
 ## 🚀 Get Started in 3 Steps
 
-### Step 1: Setup Environment
+### Step 1: Set Up Environment
 ```bash
 # Clone or navigate to the project
 cd ai-link-scraper
@@ -59,17 +59,19 @@ python main.py --check-all-channels         # Check ALL accessible channels
 Your bot now responds to mentions **across ALL channels** it has access to!
 
 ### How to Use:
-1. **Share a link with mention**: `@ailinkscraper https://example.com/article` (in any channel)
-2. **Get instant summary**: Bot will immediately scrape and summarize the link
-3. **Automatic responses**: Every 15 minutes, 7 AM - 10 PM EST (extended hours)
+1. **Direct mention with link**: `@ailinkscraper https://example.com/article` (in any channel)
+2. **Reply to messages with links**: Reply to any message containing links with just `@ailinkscraper`
+3. **Get instant summary**: Bot will immediately scrape and summarize the link(s)
+4. **Automatic responses**: Every 10 minutes monitoring across all channels
 
 ### Mention Commands:
 - `@ailinkscraper` + any link = Instant summary (works in any channel)
+- Reply to any message with links: `@ailinkscraper` = Summarizes links from original message
 - `@ailinkscraper` alone = Help message with usage instructions
 
 ### Enhanced Scheduling:
-- **Weekly scraping**: Every Monday at 1:05 PM EST (6:05 PM UTC)
-- **Mention checking**: Every 15 minutes, 7 AM - 10 PM EST (across ALL channels)
+- **Weekly scraping**: Every Monday at 1:20 PM EST (6:20 PM UTC)
+- **Mention checking**: Every 10 minutes (1:00, 1:10, 1:20, etc.) across ALL channels
 - **Manual trigger**: Available anytime through GitHub Actions
 
 ### Required Bot Permissions:

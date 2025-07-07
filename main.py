@@ -96,6 +96,12 @@ def parse_arguments():
         help='Check for mentions across all accessible channels (not just the configured channel)'
     )
     
+    parser.add_argument(
+        '--create-weekly-document',
+        action='store_true',
+        help='Create a weekly summary document (PDF/HTML) with all summaries from the past week'
+    )
+    
     return parser.parse_args()
 
 def parse_date(date_string):
@@ -152,7 +158,7 @@ def main():
         # Handle mention checking (separate from regular processing)
         if args.check_mentions:
             logger.info("Checking for recent mentions in configured channel...")
-            mentions_processed = slack_client.check_for_mentions()
+            mentions_processed = slack_client.check_for_mentions(start_date=start_date)
             logger.info(f"Processed {mentions_processed} mentions")
             return 0
         
@@ -305,6 +311,34 @@ def main():
                 logger.info("✅ Complete summary collection shared to Slack")
             else:
                 logger.warning("❌ Failed to share complete summary collection")
+        
+        if args.create_weekly_document:
+            logger.info("Creating weekly summary document...")
+            from src.summary_organizer import create_weekly_document
+            from datetime import datetime, timedelta
+            
+            # Create weekly document for the past 7 days
+            start_date = datetime.now() - timedelta(days=7)
+            document_path = create_weekly_document(args.output_folder, start_date)
+            
+            if document_path:
+                logger.info(f"✅ Weekly summary document created: {os.path.basename(document_path)}")
+                
+                # If send_to_slack is also specified, upload the document
+                if args.send_to_slack:
+                    logger.info("Uploading weekly document to Slack...")
+                    comment = f"📊 Weekly AI Link Summary for week of {start_date.strftime('%B %d, %Y')}"
+                    file_id = slack_client.upload_file_to_channel(
+                        document_path,
+                        title=f"Weekly Summary - {start_date.strftime('%Y-%m-%d')}",
+                        comment=comment
+                    )
+                    if file_id:
+                        logger.info("✅ Weekly document uploaded to Slack")
+                    else:
+                        logger.warning("❌ Failed to upload weekly document to Slack")
+            else:
+                logger.warning("❌ Failed to create weekly document")
         
         return 0
         

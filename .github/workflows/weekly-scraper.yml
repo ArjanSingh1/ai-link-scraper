@@ -2,8 +2,8 @@ name: Weekly AI Link Scraper
 
 on:
   schedule:
-    # Runs every Monday at 1:05 PM EST (6:05 PM UTC)
-    - cron: '5 18 * * 1'
+    # Runs every Monday at 1:20 PM EST (6:20 PM UTC)
+    - cron: '20 18 * * 1'
   workflow_dispatch: # Allows manual runs from GitHub UI
   repository_dispatch:
     types: [mention-detected] # Triggered when bot is mentioned
@@ -64,21 +64,21 @@ jobs:
         echo "Checking for mentions across all channels..."
         python main.py --check-all-channels --verbose
         
-        # Then do the regular weekly scraping of the configured channel
+        # Then do the regular weekly scraping of the configured channel (no Slack posting)
         echo "Processing weekly links from configured channel..."
-        if python main.py --start-date $(date -d '7 days ago' +%Y-%m-%d) --send-to-slack --verbose; then
+        if python main.py --start-date $(date -d '7 days ago' +%Y-%m-%d) --verbose; then
             echo "✅ Weekly scraping completed successfully!"
         else
             echo "❌ Weekly scraping failed, but continuing..."
             exit_code=$?
         fi
         
-        # Optional: Share complete summary collection
-        echo "Sharing complete summary collection..."
-        if python main.py --share-all-summaries; then
-            echo "✅ Summary collection shared successfully!"
+        # Create and share weekly summary document
+        echo "Creating weekly summary document..."
+        if python main.py --create-weekly-document --send-to-slack; then
+            echo "✅ Weekly summary document shared successfully!"
         else
-            echo "❌ Failed to share summary collection"
+            echo "❌ Failed to create/share weekly document"
         fi
         
         echo "All tasks completed!"
