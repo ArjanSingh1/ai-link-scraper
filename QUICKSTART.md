@@ -54,6 +54,101 @@ python main.py --check-mentions              # Check configured channel only
 python main.py --check-all-channels         # Check ALL accessible channels
 ```
 
+## 🔄 Persistent Daemon Mode (NEW!)
+
+Instead of relying only on scheduled GitHub Actions, you can now run a **persistent daemon** that continuously monitors for mentions!
+
+### Quick Setup:
+```bash
+# Test daemon functionality
+python daemon.py --test
+
+# Run daemon manually (for testing)
+python daemon.py --interval 60 --verbose
+
+# Automated setup for your platform
+python setup_daemon.py
+```
+
+### Deployment Options:
+
+#### 🍎 **macOS (LaunchAgent)**
+```bash
+# Automatic setup
+python setup_daemon.py --mode launchd
+
+# Manual commands after setup
+launchctl start com.user.ai-link-scraper-daemon
+launchctl stop com.user.ai-link-scraper-daemon
+```
+
+#### 🐧 **Linux (Systemd)**
+```bash
+# Automatic setup
+python setup_daemon.py --mode systemd
+
+# Manual commands after setup
+systemctl --user start ai-link-scraper-daemon
+systemctl --user status ai-link-scraper-daemon
+journalctl --user -u ai-link-scraper-daemon -f
+```
+
+#### 🐳 **Docker (Any Platform)**
+```bash
+# Automatic setup
+python setup_daemon.py --mode docker
+
+# Manual commands after setup
+docker-compose up -d                        # Start daemon
+docker-compose logs -f                      # View logs
+docker-compose down                         # Stop daemon
+```
+
+#### 🖥️ **Manual/Development**
+```bash
+# Just install and test
+python setup_daemon.py --mode manual
+
+# Run manually when needed
+python daemon.py --interval 60 --verbose
+```
+
+### Daemon Benefits:
+- **Faster response times**: Checks every 60 seconds (vs 10 minutes with GitHub Actions)
+- **More reliable**: No dependency on GitHub's runners
+- **Better logs**: Local log files in `logs/daemon.log`
+- **Persistent**: Automatically restarts on system reboot
+- **Resource efficient**: Low CPU/memory usage when idle
+
+### Monitoring Your Daemon:
+
+**Check if running:**
+```bash
+# macOS
+launchctl list | grep ai-link-scraper
+
+# Linux  
+systemctl --user status ai-link-scraper-daemon
+
+# Docker
+docker-compose ps
+```
+
+**View logs:**
+```bash
+# All platforms (local files)
+tail -f logs/daemon.log
+
+# macOS (system logs)
+log stream --predicate 'subsystem contains "com.user.ai-link-scraper-daemon"'
+
+# Linux (systemd)
+journalctl --user -u ai-link-scraper-daemon -f
+
+# Docker
+docker-compose logs -f
+```
+
 ## 🤖 Enhanced Mention Feature
 
 Your bot now responds to mentions **across ALL channels** it has access to!

@@ -4,15 +4,20 @@ import logging
 from datetime import datetime
 from urllib.parse import urlparse
 
-def setup_logging(log_level="INFO"):
+def setup_logging(log_level="INFO", log_file="logs/app.log"):
     """Setup logging configuration"""
+    # Create handlers
+    handlers = [logging.StreamHandler()]
+    
+    # Add file handler if log_file is specified
+    if log_file:
+        handlers.append(logging.FileHandler(log_file))
+    
     logging.basicConfig(
         level=getattr(logging, log_level.upper()),
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('logs/app.log'),
-            logging.StreamHandler()
-        ]
+        handlers=handlers,
+        force=True  # Override any existing configuration
     )
     return logging.getLogger(__name__)
 

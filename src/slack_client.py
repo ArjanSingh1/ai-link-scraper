@@ -261,16 +261,24 @@ class SlackClient:
         try:
             response = self.client.conversations_list(
                 types="public_channel,private_channel",
-                limit=1000
+                limit=200
             )
-            channels = response.get('channels', [])
-            logger.info(f"Found {len(channels)} accessible channels")
-            return channels
+            all_channels = response.get('channels', [])
+            
+            # Filter to only channels the bot is a member of
+            member_channels = []
+            for channel in all_channels:
+                if channel.get('is_member', False):
+                    member_channels.append(channel)
+            
+            logger.info(f"Found {len(member_channels)} channels where bot is a member (out of {len(all_channels)} total)")
+            return member_channels
+            
         except SlackApiError as e:
             logger.error(f"Error getting channels: {e.response['error']}")
             return []
     
-    def check_all_channels_for_mentions(self, limit=50):
+    def check_all_channels_for_mentions(self, limit=50, start_date=None):
         """Check all accessible channels for mentions and respond"""
         try:
             bot_user_id = self.get_bot_user_id()
@@ -281,25 +289,33 @@ class SlackClient:
             channels = self.get_all_channels()
             total_mentions_processed = 0
             
-            # Get recent messages (last 2 hours to catch mentions)
+            # Get recent messages (default to last 2 hours to catch mentions)
             from datetime import datetime, timedelta
-            two_hours_ago = datetime.now() - timedelta(hours=2)
+            if start_date is None:
+                start_date = datetime.now() - timedelta(hours=2)
             
-            for channel in channels:
+            # Limit channels to avoid rate limiting (most active channels first)
+            # Sort by is_general first, then limit to first 10 channels
+            channels = sorted(channels, key=lambda x: (not x.get('is_general', False), x.get('name', '')))
+            channels = channels[:10]  # Very conservative limit
+            
+            logger.info(f"Checking {len(channels)} member channels for mentions...")
+            
+            for i, channel in enumerate(channels):
                 channel_id = channel['id']
                 channel_name = channel.get('name', 'Unknown')
                 
-                logger.info(f"Checking channel #{channel_name} for mentions...")
+                logger.debug(f"Checking channel #{channel_name} ({i+1}/{len(channels)})...")
                 
                 try:
                     # Temporarily switch to this channel
                     original_channel = self.channel_id
                     self.channel_id = channel_id
                     
-                    # Get messages from this channel
+                    # Get messages from this channel with smaller limit for multi-channel
                     messages = self.get_channel_messages(
-                        start_date=two_hours_ago,
-                        limit=limit
+                        start_date=start_date,
+                        limit=min(limit, 20)  # Smaller limit per channel
                     )
                     
                     channel_mentions = 0
@@ -318,9 +334,31 @@ class SlackClient:
                     
                     if channel_mentions > 0:
                         logger.info(f"Processed {channel_mentions} mentions in #{channel_name}")
+                    else:
+                        logger.debug(f"No mentions found in #{channel_name}")
                     
                     # Restore original channel
                     self.channel_id = original_channel
+                    
+                    # Add delay between channels to respect rate limits
+                    if i < len(channels) - 1:  # Don't sleep after the last channel
+                        time.sleep(2)  # Increased delay
+                    
+                except SlackApiError as e:
+                    error_code = e.response.get('error', 'unknown')
+                    if error_code == 'ratelimited':
+                        retry_after = e.response.get('headers', {}).get('Retry-After', 60)
+                        logger.warning(f"Rate limited, waiting {retry_after} seconds...")
+                        time.sleep(int(retry_after))
+                        # Skip this channel and continue
+                    elif error_code == 'not_in_channel':
+                        logger.debug(f"Bot not in channel #{channel_name}, skipping...")
+                    else:
+                        logger.warning(f"Slack API error in channel #{channel_name}: {error_code}")
+                    
+                    # Restore original channel on error
+                    self.channel_id = original_channel
+                    continue
                     
                 except Exception as e:
                     logger.error(f"Error checking channel #{channel_name}: {str(e)}")
@@ -328,7 +366,7 @@ class SlackClient:
                     self.channel_id = original_channel
                     continue
             
-            logger.info(f"Total mentions processed across all channels: {total_mentions_processed}")
+            logger.info(f"Total mentions processed across {len(channels)} channels: {total_mentions_processed}")
             return total_mentions_processed
             
         except Exception as e:
