@@ -256,10 +256,13 @@ class PDFGenerator:
         """Create the main content section"""
         story = []
         
+        # Sort data by slack_timestamp (newest to oldest)
+        sorted_data = self._sort_data_by_date(data)
+        
         story.append(Paragraph("🔗 Link Collection Details", self.styles['CustomTitle']))
         story.append(Spacer(1, 0.3*inch))
         
-        for i, item in enumerate(data, 1):
+        for i, item in enumerate(sorted_data, 1):
             # Add some spacing between items
             if i > 1:
                 story.append(Spacer(1, 0.15*inch))
@@ -293,21 +296,33 @@ class PDFGenerator:
                     content_text = f"<b>📝 Content Preview:</b><br/><br/>{content}"
                     story.append(Paragraph(content_text, self.styles['Summary']))
             
-            # Metadata with icons and better formatting
+            # Metadata with icons and better formatting - prioritize sender and date
             meta_items = []
             
+            # Add message sender and date first (most important info)
+            if item.get('slack_user'):
+                meta_items.append(f"👤 <b>Shared by:</b> {item['slack_user']}")
+            
+            if item.get('slack_timestamp'):
+                try:
+                    # Format the Slack message date nicely
+                    from datetime import datetime
+                    slack_date = datetime.fromisoformat(item['slack_timestamp'].replace('Z', '+00:00'))
+                    formatted_slack_date = slack_date.strftime('%b %d, %Y at %I:%M %p')
+                    meta_items.append(f"� <b>Shared on:</b> {formatted_slack_date}")
+                except:
+                    meta_items.append(f"📅 <b>Shared on:</b> {item['slack_timestamp']}")
+            
+            # Add other metadata
             if item.get('domain'):
                 meta_items.append(f"🌐 <b>Domain:</b> {item['domain']}")
             
             if item.get('word_count'):
-                meta_items.append(f"📊 <b>Length:</b> {item['word_count']:,} words")
-            
-            if item.get('slack_user'):
-                meta_items.append(f"👤 <b>Shared by:</b> {item['slack_user']}")
+                meta_items.append(f"� <b>Length:</b> {item['word_count']:,} words")
             
             if item.get('scraped_at'):
                 try:
-                    # Format the date nicely
+                    # Format the processing date nicely
                     from datetime import datetime
                     scraped_date = datetime.fromisoformat(item['scraped_at'].replace('Z', '+00:00'))
                     formatted_date = scraped_date.strftime('%b %d, %Y at %I:%M %p')
@@ -715,13 +730,15 @@ class PDFGenerator:
         </div>
     </div>'''
         
-        # Main content
+        # Main content - sort data first
+        sorted_data = self._sort_data_by_date(data)
+        
         html += '''
     <div class="section-break">
         <h1 class="section-title">🔗 Link Collection Details</h1>
         <div class="links-container">'''
         
-        for i, item in enumerate(data, 1):
+        for i, item in enumerate(sorted_data, 1):
             title_text = item.get('title', 'Untitled')
             url = item.get('url', '')
             domain = item.get('domain', 'Unknown')
@@ -749,14 +766,27 @@ class PDFGenerator:
                 {content}
             </div>'''
             
-            # Metadata
+            # Metadata - prioritize sender and message date
             meta_items = []
+            
+            # Add message sender and date first (most important info)
+            if item.get('slack_user'):
+                meta_items.append(f'<div class="meta-item"><span class="meta-icon">👤</span>Shared by: <strong>{item["slack_user"]}</strong></div>')
+            
+            if item.get('slack_timestamp'):
+                try:
+                    from datetime import datetime
+                    slack_date = datetime.fromisoformat(item['slack_timestamp'].replace('Z', '+00:00'))
+                    formatted_slack_date = slack_date.strftime('%b %d, %Y at %I:%M %p')
+                    meta_items.append(f'<div class="meta-item"><span class="meta-icon">�</span>Shared on: <strong>{formatted_slack_date}</strong></div>')
+                except:
+                    meta_items.append(f'<div class="meta-item"><span class="meta-icon">📅</span>Shared on: <strong>{item["slack_timestamp"]}</strong></div>')
+            
+            # Add other metadata
             if domain and domain != 'Unknown':
                 meta_items.append(f'<div class="meta-item"><span class="meta-icon">🌐</span>Domain: {domain}</div>')
             if item.get('word_count'):
-                meta_items.append(f'<div class="meta-item"><span class="meta-icon">📊</span>Length: {item["word_count"]:,} words</div>')
-            if item.get('slack_user'):
-                meta_items.append(f'<div class="meta-item"><span class="meta-icon">👤</span>Shared by: {item["slack_user"]}</div>')
+                meta_items.append(f'<div class="meta-item"><span class="meta-icon">�</span>Length: {item["word_count"]:,} words</div>')
             if item.get('scraped_at'):
                 try:
                     from datetime import datetime
@@ -787,6 +817,52 @@ class PDFGenerator:
 </html>'''
         
         return html
+    
+    def _sort_data_by_date(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Sort data by slack_timestamp (newest to oldest)"""
+        def get_timestamp(item):
+            timestamp_str = item.get('slack_timestamp')
+            if timestamp_str:
+                try:
+                    from datetime import datetime
+                    # Parse ISO format timestamp
+                    return datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                except:
+                    pass
+            # If no valid timestamp, put at the end
+            return datetime.min
+        
+        return sorted(data, key=get_timestamp, reverse=True)
+    
+    def _format_content_for_html(self, content):
+        """Format content for HTML display with proper paragraph structure"""
+        if not content:
+            return ""
+        
+        import re
+        
+        # Split content into paragraphs
+        paragraphs = content.split('\n\n')
+        formatted_paragraphs = []
+        
+        for para in paragraphs:
+            para = para.strip()
+            if not para:
+                continue
+                
+            # Handle headings (lines that are short and likely titles)
+            lines = para.split('\n')
+            if len(lines) == 1 and len(para) < 100 and not para.endswith('.'):
+                # Likely a heading
+                formatted_paragraphs.append(f'<h3 style="margin: 20px 0 10px 0; font-weight: bold; color: #2c3e50;">{para}</h3>')
+            else:
+                # Regular paragraph - join lines with proper spacing
+                text = ' '.join(line.strip() for line in lines if line.strip())
+                if text:
+                    formatted_paragraphs.append(f'<p style="margin: 10px 0; line-height: 1.6;">{text}</p>')
+        
+        return '\n'.join(formatted_paragraphs)
+    
 
 
 def create_pdf_report(data: List[Dict[str, Any]], 

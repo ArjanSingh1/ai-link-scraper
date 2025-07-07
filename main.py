@@ -217,7 +217,7 @@ def main():
                 links_data = links_data[:args.max_links]
             
             # Process links for Google Drive
-            processor = LinkProcessor()
+            processor = LinkProcessor(slack_client)
             processed_data = processor.scrape_links_for_drive(links_data, 'scraped_links')
             
             if processed_data:

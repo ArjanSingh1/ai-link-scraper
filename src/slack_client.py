@@ -1,3 +1,4 @@
+"""Slack client for interacting with Slack API, handling messages, mentions, and file uploads."""
 import logging
 import time
 import os
@@ -14,7 +15,66 @@ class SlackClient:
         """Initialize Slack client with bot token"""
         self.client = WebClient(token=settings.SLACK_BOT_TOKEN)
         self.channel_id = settings.SLACK_CHANNEL_ID
+        # Cache for user info to avoid repeated API calls
+        self._user_cache = {}
         
+    def get_user_info(self, user_id):
+        """Get user information by user ID, with caching"""
+        if not user_id:
+            return None
+            
+        # Check cache first
+        if user_id in self._user_cache:
+            return self._user_cache[user_id]
+        
+        try:
+            response = self.client.users_info(user=user_id)
+            user_info = response.get('user', {})
+            
+            # Extract useful user information
+            user_data = {
+                'id': user_id,
+                'name': user_info.get('name', user_id),
+                'display_name': user_info.get('profile', {}).get('display_name', ''),
+                'real_name': user_info.get('profile', {}).get('real_name', ''),
+                'email': user_info.get('profile', {}).get('email', '')
+            }
+            
+            # Cache the result
+            self._user_cache[user_id] = user_data
+            return user_data
+            
+        except SlackApiError as e:
+            logger.warning(f"Failed to get user info for {user_id}: {e}")
+            # Cache the failure with just the ID
+            fallback_data = {'id': user_id, 'name': user_id, 'display_name': '', 'real_name': '', 'email': ''}
+            self._user_cache[user_id] = fallback_data
+            return fallback_data
+    
+    def get_user_display_name(self, user_id):
+        """Get the best available display name for a user"""
+        if not user_id:
+            return "Unknown User"
+            
+        user_info = self.get_user_info(user_id)
+        if not user_info:
+            return user_id
+        
+        # Prefer display_name, then real_name, then name, then ID
+        display_name = user_info.get('display_name', '').strip()
+        if display_name:
+            return display_name
+            
+        real_name = user_info.get('real_name', '').strip()
+        if real_name:
+            return real_name
+            
+        name = user_info.get('name', '').strip()
+        if name and name != user_id:
+            return name
+            
+        return user_id
+    
     def get_channel_messages(self, start_date=None, end_date=None, limit=None):
         """Fetch messages from the specified Slack channel"""
         try:

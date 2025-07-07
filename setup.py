@@ -67,7 +67,7 @@ def display_setup_instructions():
     print("\n2. Set up your Slack bot:")
     print("   - Go to https://api.slack.com/apps")
     print("   - Create a new app")
-    print("   - Add bot token scopes: channels:history, channels:read")
+    print("   - Add bot token scopes: channels:history, channels:read, users:read")
     print("   - Install the app to your workspace")
     print("\n3. Run the scraper:")
     print("   python main.py")
