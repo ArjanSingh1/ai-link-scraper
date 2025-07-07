@@ -1,0 +1,74 @@
+name: Test AI Link Scraper
+
+on:
+  workflow_dispatch: # Manual trigger only
+  
+jobs:
+  test-scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create logs directory
+      run: mkdir -p logs
+    
+    - name: Test connection
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        echo "Testing Slack connection..."
+        python -c "
+        import sys
+        sys.path.append('.')
+        from src.slack_client import SlackClient
+        try:
+            client = SlackClient()
+            if client.test_connection():
+                print('✅ Slack connection successful!')
+            else:
+                print('❌ Slack connection failed!')
+                sys.exit(1)
+        except Exception as e:
+            print(f'❌ Connection test error: {e}')
+            sys.exit(1)
+        "
+    
+    - name: Test scraper (last 2 days)
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        echo "Running test scrape for last 2 days..."
+        python main.py --start-date $(date -d '2 days ago' +%Y-%m-%d) --send-to-slack --verbose
+        echo "Test completed!"
+    
+    - name: Upload test logs
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-logs-${{ github.run_number }}
+        path: logs/
+        retention-days: 7
+    
+    - name: Upload test summaries
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-summaries-${{ github.run_number }}
+        path: summaries/
+        retention-days: 7
