@@ -49,15 +49,27 @@ python main.py --share-all-summaries
 # Complete workflow: scrape, summarize, and share everything
 python main.py --send-to-slack --share-all-summaries --verbose
 
-# Scrape links from specific date range
-python main.py --start-date 2024-01-01 --end-date 2024-01-31
-
-# Limit number of links to process
-python main.py --limit 25
-
-# Use custom output folder
-python main.py --output-folder my_summaries
+# NEW: Check for mentions and respond immediately
+python main.py --check-mentions
 ```
+
+## 🤖 New Mention Feature
+
+Your bot now responds to mentions! 
+
+### How to Use:
+1. **Share a link with mention**: `@ailinkscraper https://example.com/article`
+2. **Get instant summary**: Bot will immediately scrape and summarize the link
+3. **Automatic responses**: Every 30 minutes during business hours (9 AM - 6 PM UTC)
+
+### Mention Commands:
+- `@ailinkscraper` + any link = Instant summary
+- `@ailinkscraper` alone = Help message with usage instructions
+
+### Scheduling:
+- **Weekly scraping**: Every Monday at 1 PM UTC (GitHub Actions)
+- **Mention checking**: Every 30 minutes during business hours (GitHub Actions)
+- **Manual trigger**: Available anytime through GitHub Actions
 
 ## 📋 Slack Setup Checklist
 

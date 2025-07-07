@@ -255,3 +255,150 @@ class SlackClient:
         except Exception as e:
             logger.error(f"Error in share_complete_summary_folder: {str(e)}")
             return None
+    
+    def get_bot_user_id(self):
+        """Get the bot's user ID for mention detection"""
+        try:
+            response = self.client.auth_test()
+            return response.get('user_id')
+        except SlackApiError as e:
+            logger.error(f"Error getting bot user ID: {e.response['error']}")
+            return None
+    
+    def is_mention(self, message_text, bot_user_id=None):
+        """Check if the message mentions the bot"""
+        if not bot_user_id:
+            bot_user_id = self.get_bot_user_id()
+        
+        if not bot_user_id:
+            return False
+        
+        # Check for direct user ID mention
+        mention_pattern = f"<@{bot_user_id}>"
+        if mention_pattern in message_text:
+            return True
+        
+        # Check for @ailinkscraper mention (case insensitive)
+        if "@ailinkscraper" in message_text.lower():
+            return True
+        
+        return False
+    
+    def respond_to_mention(self, message, bot_user_id=None):
+        """Process a mention and respond with link summaries"""
+        try:
+            message_text = message.get('text', '')
+            message_ts = message.get('ts')
+            
+            logger.info(f"Processing mention in message: {message_text[:100]}...")
+            
+            # Extract URLs from the mentioned message
+            from src.utils import extract_urls_from_text
+            urls = extract_urls_from_text(message_text)
+            
+            if not urls:
+                # No links in mention, provide helpful response
+                response = "👋 Hi! I'm your AI Link Scraper bot.\\n\\n" \
+                          "📝 **How to use me:**\\n" \
+                          "• Share a link and mention @ailinkscraper to get an instant summary\\n" \
+                          "• I automatically process all links every Monday at 1 PM\\n" \
+                          "• Check threaded replies for summaries\\n\\n" \
+                          "💡 Try: @ailinkscraper https://example.com/article"
+                
+                self.send_message(response, thread_ts=message_ts)
+                return
+            
+            # Process each URL mentioned
+            from src.web_scraper import WebScraper
+            from src.summarizer import Summarizer
+            
+            scraper = WebScraper()
+            summarizer = Summarizer()
+            
+            for url in urls:
+                logger.info(f"Processing mentioned URL: {url}")
+                
+                # Scrape the URL
+                scraped_data = scraper.scrape_url(url)
+                
+                if scraped_data and scraped_data.get('status') == 'success':
+                    # Generate summary
+                    summary = summarizer.summarize_content(
+                        scraped_data['content'],
+                        scraped_data.get('title'),
+                        scraped_data.get('url')
+                    )
+                    
+                    # Generate tags
+                    tags = summarizer.generate_tags(
+                        scraped_data['content'],
+                        scraped_data.get('title')
+                    )
+                    
+                    # Format summary data
+                    summary_data = {
+                        'url': url,
+                        'title': scraped_data.get('title'),
+                        'summary': summary,
+                        'tags': tags,
+                        'word_count': scraped_data.get('word_count', 0),
+                        'slack_message_id': message_ts
+                    }
+                    
+                    # Send summary as threaded reply
+                    self.send_summary_to_channel(summary_data, reply_to_message=True)
+                    
+                    # Save summary to file
+                    from src.utils import save_summary_to_file
+                    save_summary_to_file(summary_data, 'summaries')
+                    
+                    logger.info(f"Successfully processed mention for URL: {url}")
+                    
+                else:
+                    # Failed to scrape
+                    error_message = f"❌ Sorry, I couldn't access or process this link: {url}\\n" \
+                                   f"The site might be down, require authentication, or block automated access."
+                    self.send_message(error_message, thread_ts=message_ts)
+            
+        except Exception as e:
+            logger.error(f"Error processing mention: {str(e)}")
+            error_response = "❌ Sorry, I encountered an error processing your request. Please try again later."
+            self.send_message(error_response, thread_ts=message.get('ts'))
+    
+    def check_for_mentions(self, limit=50):
+        """Check recent messages for mentions and respond"""
+        try:
+            bot_user_id = self.get_bot_user_id()
+            if not bot_user_id:
+                logger.error("Could not get bot user ID")
+                return
+            
+            # Get recent messages (last hour)
+            from datetime import datetime, timedelta
+            one_hour_ago = datetime.now() - timedelta(hours=1)
+            
+            messages = self.get_channel_messages(
+                start_date=one_hour_ago,
+                limit=limit
+            )
+            
+            mentions_processed = 0
+            
+            for message in messages:
+                # Skip bot's own messages
+                if message.get('user') == bot_user_id:
+                    continue
+                
+                message_text = message.get('text', '')
+                
+                if self.is_mention(message_text, bot_user_id):
+                    logger.info(f"Found mention in message: {message.get('ts')}")
+                    self.respond_to_mention(message, bot_user_id)
+                    mentions_processed += 1
+            
+            logger.info(f"Processed {mentions_processed} mentions")
+            return mentions_processed
+            
+        except Exception as e:
+            logger.error(f"Error checking for mentions: {str(e)}")
+            return 0

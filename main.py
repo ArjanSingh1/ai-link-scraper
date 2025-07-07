@@ -84,6 +84,12 @@ def parse_arguments():
         help='Create and share a complete summary collection file to Slack'
     )
     
+    parser.add_argument(
+        '--check-mentions',
+        action='store_true',
+        help='Check for recent mentions and respond with link summaries'
+    )
+    
     return parser.parse_args()
 
 def parse_date(date_string):
@@ -136,6 +142,15 @@ def main():
         channel_info = slack_client.get_channel_info()
         if channel_info:
             logger.info(f"Connected to channel: {channel_info.get('name', 'Unknown')}")
+        
+        # Handle mention checking (separate from regular processing)
+        if args.check_mentions:
+            logger.info("Checking for recent mentions...")
+            mentions_processed = slack_client.check_for_mentions()
+            logger.info(f"Processed {mentions_processed} mentions")
+            return 0
+        
+        # Regular processing continues below...
         
         # Fetch messages from Slack
         logger.info("Fetching messages from Slack...")

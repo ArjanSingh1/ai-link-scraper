@@ -1,0 +1,46 @@
+name: AI Link Scraper - Mention Response
+
+on:
+  schedule:
+    # Check for mentions every 30 minutes during business hours (9 AM - 6 PM UTC)
+    - cron: '*/30 9-18 * * 1-5'
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  check-mentions:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create logs directory
+      run: mkdir -p logs
+    
+    - name: Check for mentions and respond
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        echo "Checking for recent mentions..."
+        python main.py --check-mentions --verbose
+        echo "Mention check completed!"
+    
+    - name: Upload logs
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: mention-check-logs-${{ github.run_number }}
+        path: logs/
+        retention-days: 7

@@ -1,0 +1,115 @@
+name: Weekly AI Link Scraper
+
+on:
+  schedule:
+    # Runs every Monday at 1 PM UTC (adjust timezone as needed)
+    - cron: '0 13 * * 1'
+  workflow_dispatch: # Allows manual runs from GitHub UI
+
+jobs:
+  scrape-links:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create logs directory
+      run: mkdir -p logs
+    
+    - name: Test connection
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN || '' }}
+        SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        echo "Testing connections before starting weekly scrape..."
+        python -c "
+        import sys
+        sys.path.append('.')
+        from src.slack_client import SlackClient
+        try:
+            client = SlackClient()
+            if client.test_connection():
+                print('✅ Slack connection successful!')
+            else:
+                print('❌ Slack connection failed!')
+                sys.exit(1)
+        except Exception as e:
+            print(f'❌ Connection test error: {e}')
+            sys.exit(1)
+        "
+    
+    - name: Run weekly scraper
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        echo "Starting weekly AI link scraper..."
+        
+        # Scrape links from the past week and send to Slack
+        if python main.py --start-date $(date -d '7 days ago' +%Y-%m-%d) --send-to-slack --verbose; then
+            echo "✅ Weekly scraping completed successfully!"
+        else
+            echo "❌ Weekly scraping failed, but continuing..."
+            exit_code=$?
+        fi
+        
+        # Optional: Share complete summary collection
+        echo "Sharing complete summary collection..."
+        if python main.py --share-all-summaries; then
+            echo "✅ Summary collection shared successfully!"
+        else
+            echo "❌ Failed to share summary collection"
+        fi
+        
+        echo "All tasks completed!"
+    
+    - name: Send weekly summary notification
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+      run: |
+        echo "Sending weekly summary notification..."
+        python -c "
+        import sys
+        sys.path.append('.')
+        from src.slack_client import SlackClient
+        from datetime import datetime, timedelta
+        try:
+            client = SlackClient()
+            # Send weekly summary instead of just completion notification
+            week_start = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+            message = f'📊 Weekly AI Link Summary for week of {week_start}\\n\\nI\\'ve processed all shared links from this past week and posted summaries as threaded replies. Check above for the latest insights! 🧠\\n\\n💡 Tip: Mention @ailinkscraper anytime for immediate link processing!'
+            client.send_message(message)
+            print('✅ Weekly summary notification sent!')
+        except Exception as e:
+            print(f'❌ Failed to send notification: {e}')
+        " || echo "Notification failed, but workflow completed"
+
+    - name: Upload logs as artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: scraper-logs-${{ github.run_number }}
+        path: logs/
+        retention-days: 30
+    
+    - name: Upload summaries as artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: summaries-${{ github.run_number }}
+        path: summaries/
+        retention-days: 90
