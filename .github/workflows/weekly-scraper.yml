@@ -1,0 +1,63 @@
+name: Weekly AI Link Scraper
+
+on:
+  schedule:
+    # Runs every Monday at 9 AM UTC (adjust timezone as needed)
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Allows manual runs from GitHub UI
+
+jobs:
+  scrape-links:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create logs directory
+      run: mkdir -p logs
+    
+    - name: Run weekly scraper
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        echo "Starting weekly AI link scraper..."
+        
+        # Scrape links from the past week and send to Slack
+        python main.py --start-date $(date -d '7 days ago' +%Y-%m-%d) --send-to-slack --verbose
+        
+        echo "Weekly scraping completed!"
+        
+        # Optional: Share complete summary collection
+        echo "Sharing complete summary collection..."
+        python main.py --share-all-summaries
+        
+        echo "All tasks completed successfully!"
+    
+    - name: Upload logs as artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: scraper-logs-${{ github.run_number }}
+        path: logs/
+        retention-days: 30
+    
+    - name: Upload summaries as artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: summaries-${{ github.run_number }}
+        path: summaries/
+        retention-days: 90
