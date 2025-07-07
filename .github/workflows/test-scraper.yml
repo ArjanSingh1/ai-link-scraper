@@ -32,13 +32,20 @@ jobs:
       run: |
         echo "Testing Slack connection..."
         python -c "
-from src.slack_client import SlackClient
-client = SlackClient()
-if client.test_connection():
-    print('✅ Slack connection successful!')
-else:
-    print('❌ Slack connection failed!')
-"
+        import sys
+        sys.path.append('.')
+        from src.slack_client import SlackClient
+        try:
+            client = SlackClient()
+            if client.test_connection():
+                print('✅ Slack connection successful!')
+            else:
+                print('❌ Slack connection failed!')
+                sys.exit(1)
+        except Exception as e:
+            print(f'❌ Connection test error: {e}')
+            sys.exit(1)
+        "
     
     - name: Test scraper (last 2 days)
       env:
@@ -48,7 +55,6 @@ else:
       run: |
         echo "Running test scrape for last 2 days..."
         python main.py --start-date $(date -d '2 days ago' +%Y-%m-%d) --send-to-slack --verbose
-        
         echo "Test completed!"
     
     - name: Upload test logs

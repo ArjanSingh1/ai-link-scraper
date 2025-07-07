@@ -1,4 +1,5 @@
 import logging
+import re
 import openai
 from openai import OpenAI
 from config.settings import settings
@@ -86,6 +87,8 @@ class Summarizer:
             else:
                 # Add a period to make it complete
                 text += '.'
+        
+        return text
         
         return text
 
