@@ -257,8 +257,9 @@ class SlackClient:
             return None
     
     def get_all_channels(self):
-        """Get list of all channels the bot has access to"""
+        """Get list of all channels and DMs the bot has access to"""
         try:
+            # Get regular channels
             response = self.client.conversations_list(
                 types="public_channel,private_channel",
                 limit=200
@@ -271,7 +272,26 @@ class SlackClient:
                 if channel.get('is_member', False):
                     member_channels.append(channel)
             
-            logger.info(f"Found {len(member_channels)} channels where bot is a member (out of {len(all_channels)} total)")
+            # Get DMs (instant messages)
+            try:
+                dm_response = self.client.conversations_list(
+                    types="im",
+                    limit=100
+                )
+                dms = dm_response.get('channels', [])
+                
+                # All DMs are accessible by default, add them to the list
+                for dm in dms:
+                    # Mark DMs for easier identification
+                    dm['is_dm'] = True
+                    member_channels.append(dm)
+                    
+                logger.info(f"Found {len(member_channels)} conversations: {len(member_channels)-len(dms)} channels + {len(dms)} DMs")
+                
+            except SlackApiError as dm_e:
+                logger.warning(f"Could not access DMs (missing im:history scope?): {dm_e.response['error']}")
+                logger.info(f"Found {len(member_channels)} channels where bot is a member (out of {len(all_channels)} total)")
+            
             return member_channels
             
         except SlackApiError as e:
@@ -279,7 +299,7 @@ class SlackClient:
             return []
     
     def check_all_channels_for_mentions(self, limit=50, start_date=None):
-        """Check all accessible channels for mentions and respond"""
+        """Check all accessible channels and DMs for mentions and respond"""
         try:
             bot_user_id = self.get_bot_user_id()
             if not bot_user_id:
@@ -294,31 +314,44 @@ class SlackClient:
             if start_date is None:
                 start_date = datetime.now() - timedelta(hours=2)
             
-            # Limit channels to avoid rate limiting (most active channels first)
-            # Sort by is_general first, then limit to first 10 channels
-            channels = sorted(channels, key=lambda x: (not x.get('is_general', False), x.get('name', '')))
-            channels = channels[:10]  # Very conservative limit
+            # Separate DMs and channels for different handling
+            dms = [ch for ch in channels if ch.get('is_dm', False)]
+            regular_channels = [ch for ch in channels if not ch.get('is_dm', False)]
             
-            logger.info(f"Checking {len(channels)} member channels for mentions...")
+            # Process DMs first (usually fewer and more important)
+            # Sort by is_general first, then limit regular channels
+            regular_channels = sorted(regular_channels, key=lambda x: (not x.get('is_general', False), x.get('name', '')))
+            regular_channels = regular_channels[:8]  # Conservative limit for channels
             
-            for i, channel in enumerate(channels):
-                channel_id = channel['id']
-                channel_name = channel.get('name', 'Unknown')
+            all_conversations = dms + regular_channels
+            
+            logger.info(f"Checking {len(all_conversations)} conversations: {len(dms)} DMs + {len(regular_channels)} channels")
+            
+            for i, conversation in enumerate(all_conversations):
+                conv_id = conversation['id']
+                is_dm = conversation.get('is_dm', False)
                 
-                logger.debug(f"Checking channel #{channel_name} ({i+1}/{len(channels)})...")
+                if is_dm:
+                    # For DMs, get user info
+                    conv_name = f"DM-{conversation.get('user', 'unknown')}"
+                else:
+                    conv_name = f"#{conversation.get('name', 'Unknown')}"
+                
+                logger.debug(f"Checking {conv_name} ({i+1}/{len(all_conversations)})...")
                 
                 try:
-                    # Temporarily switch to this channel
+                    # Temporarily switch to this conversation
                     original_channel = self.channel_id
-                    self.channel_id = channel_id
+                    self.channel_id = conv_id
                     
-                    # Get messages from this channel with smaller limit for multi-channel
+                    # Get messages from this conversation with smaller limit for multi-conversation
+                    conversation_limit = min(limit, 10 if is_dm else 20)  # Smaller limit for DMs
                     messages = self.get_channel_messages(
                         start_date=start_date,
-                        limit=min(limit, 20)  # Smaller limit per channel
+                        limit=conversation_limit
                     )
                     
-                    channel_mentions = 0
+                    conv_mentions = 0
                     for message in messages:
                         # Skip bot's own messages
                         if message.get('user') == bot_user_id:
@@ -327,22 +360,22 @@ class SlackClient:
                         message_text = message.get('text', '')
                         
                         if self.is_mention(message_text, bot_user_id):
-                            logger.info(f"Found mention in #{channel_name}: {message.get('ts')}")
+                            logger.info(f"Found mention in {conv_name}: {message.get('ts')}")
                             self.respond_to_mention(message, bot_user_id)
-                            channel_mentions += 1
+                            conv_mentions += 1
                             total_mentions_processed += 1
                     
-                    if channel_mentions > 0:
-                        logger.info(f"Processed {channel_mentions} mentions in #{channel_name}")
+                    if conv_mentions > 0:
+                        logger.info(f"Processed {conv_mentions} mentions in {conv_name}")
                     else:
-                        logger.debug(f"No mentions found in #{channel_name}")
+                        logger.debug(f"No mentions found in {conv_name}")
                     
                     # Restore original channel
                     self.channel_id = original_channel
                     
-                    # Add delay between channels to respect rate limits
-                    if i < len(channels) - 1:  # Don't sleep after the last channel
-                        time.sleep(2)  # Increased delay
+                    # Add delay between conversations to respect rate limits
+                    if i < len(all_conversations) - 1:  # Don't sleep after the last conversation
+                        time.sleep(1 if is_dm else 2)  # Less delay for DMs
                     
                 except SlackApiError as e:
                     error_code = e.response.get('error', 'unknown')
@@ -350,23 +383,23 @@ class SlackClient:
                         retry_after = e.response.get('headers', {}).get('Retry-After', 60)
                         logger.warning(f"Rate limited, waiting {retry_after} seconds...")
                         time.sleep(int(retry_after))
-                        # Skip this channel and continue
+                        # Skip this conversation and continue
                     elif error_code == 'not_in_channel':
-                        logger.debug(f"Bot not in channel #{channel_name}, skipping...")
+                        logger.debug(f"Bot not in {conv_name}, skipping...")
                     else:
-                        logger.warning(f"Slack API error in channel #{channel_name}: {error_code}")
+                        logger.warning(f"Slack API error in {conv_name}: {error_code}")
                     
                     # Restore original channel on error
                     self.channel_id = original_channel
                     continue
                     
                 except Exception as e:
-                    logger.error(f"Error checking channel #{channel_name}: {str(e)}")
+                    logger.error(f"Error checking {conv_name}: {str(e)}")
                     # Restore original channel on error
                     self.channel_id = original_channel
                     continue
             
-            logger.info(f"Total mentions processed across {len(channels)} channels: {total_mentions_processed}")
+            logger.info(f"Total mentions processed across {len(all_conversations)} conversations: {total_mentions_processed}")
             return total_mentions_processed
             
         except Exception as e:

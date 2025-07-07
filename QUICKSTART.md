@@ -173,11 +173,20 @@ Your bot now responds to mentions **across ALL channels** it has access to!
 Your Slack bot needs these scopes for full functionality:
 - `channels:history` - Read messages from public channels
 - `groups:history` - Read messages from private channels  
+- `im:history` - **NEW**: Read messages from DMs (Direct Messages)
 - `channels:read` - Get channel information
 - `groups:read` - Get private channel information
 - `chat:write` - Send messages
 - `files:write` - Upload files
 - `links:read` - Handle links
+
+### ✨ **NEW**: DM Support!
+The bot now responds to mentions in **Direct Messages** too! Just add the `im:history` scope to enable DM support.
+
+**Usage in DMs:**
+- Send a DM: `@ailinkscraper https://example.com/article`
+- Or just: `@ailinkscraper` with any link in the message
+- Bot will respond instantly with summaries!
 
 ## 📋 Slack Setup Checklist
 
@@ -192,6 +201,9 @@ Your Slack bot needs these scopes for full functionality:
    - Add Bot Token Scopes:
      - `channels:history` (to read messages)
      - `channels:read` (to access channel info)
+     - `groups:history` (to read private channels)
+     - `groups:read` (to access private channel info)
+     - `im:history` (to read DMs)
      - `chat:write` (to send summary messages)
      - `files:write` (to upload summary files)
 
