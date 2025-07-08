@@ -135,30 +135,138 @@ class SlackClient:
             return []
     
     def extract_links_from_messages(self, messages):
-        """Extract all URLs from Slack messages"""
+        """Extract all URLs from Slack messages, including threaded replies and message blocks"""
         links_data = []
         
         for message in messages:
-            # Skip bot messages and messages without text
-            if message.get('bot_id') or not message.get('text'):
+            # Skip bot messages
+            if message.get('bot_id'):
                 continue
-                
-            text = message.get('text', '')
-            urls = extract_urls_from_text(text)
             
-            if urls:
-                for url in urls:
-                    link_data = {
-                        'url': url,
-                        'slack_message_id': message.get('ts'),
-                        'message_text': text,
-                        'user': message.get('user'),
-                        'timestamp': datetime.fromtimestamp(float(message.get('ts', 0)))
-                    }
-                    links_data.append(link_data)
+            # Extract URLs from this message
+            message_links = self._extract_urls_from_single_message(message)
+            links_data.extend(message_links)
+            
+            # Check for threaded replies
+            if message.get('reply_count', 0) > 0:
+                thread_links = self._extract_links_from_thread(message.get('ts'))
+                links_data.extend(thread_links)
         
-        logger.info(f"Extracted {len(links_data)} links from {len(messages)} messages")
+        logger.info(f"Extracted {len(links_data)} links from {len(messages)} messages (including threads)")
         return links_data
+
+    def _extract_urls_from_single_message(self, message):
+        """Extract URLs from a single message, checking text, blocks, and attachments"""
+        urls = []
+        message_text = ""
+        
+        # Extract from main text field
+        if message.get('text'):
+            message_text = message.get('text', '')
+            urls.extend(extract_urls_from_text(message_text))
+        
+        # Extract from message blocks (modern Slack messages)
+        if message.get('blocks'):
+            for block in message.get('blocks', []):
+                block_text = self._extract_text_from_block(block)
+                if block_text:
+                    message_text += " " + block_text
+                    urls.extend(extract_urls_from_text(block_text))
+        
+        # Extract from attachments
+        if message.get('attachments'):
+            for attachment in message.get('attachments', []):
+                # Check attachment text fields
+                for field in ['text', 'pretext', 'title', 'fallback']:
+                    if attachment.get(field):
+                        attachment_text = attachment.get(field)
+                        message_text += " " + attachment_text
+                        urls.extend(extract_urls_from_text(attachment_text))
+                
+                # Check attachment fields array
+                if attachment.get('fields'):
+                    for field in attachment.get('fields', []):
+                        if field.get('value'):
+                            field_text = field.get('value')
+                            message_text += " " + field_text
+                            urls.extend(extract_urls_from_text(field_text))
+        
+        # Remove duplicates while preserving order
+        unique_urls = []
+        seen = set()
+        for url in urls:
+            if url not in seen:
+                seen.add(url)
+                unique_urls.append(url)
+        
+        # Create link data for each unique URL
+        links_data = []
+        for url in unique_urls:
+            link_data = {
+                'url': url,
+                'slack_message_id': message.get('ts'),
+                'message_text': message_text.strip(),
+                'user': message.get('user'),
+                'timestamp': datetime.fromtimestamp(float(message.get('ts', 0))),
+                'is_thread_reply': False
+            }
+            links_data.append(link_data)
+        
+        return links_data
+
+    def _extract_text_from_block(self, block):
+        """Extract text content from a Slack block"""
+        text_content = ""
+        
+        if block.get('type') == 'section' and block.get('text'):
+            text_content += block['text'].get('text', '')
+        
+        if block.get('type') == 'rich_text':
+            # Handle rich text blocks
+            for element in block.get('elements', []):
+                if element.get('type') == 'rich_text_section':
+                    for sub_element in element.get('elements', []):
+                        if sub_element.get('type') == 'text':
+                            text_content += sub_element.get('text', '')
+                        elif sub_element.get('type') == 'link':
+                            text_content += sub_element.get('url', '')
+        
+        return text_content
+
+    def _extract_links_from_thread(self, thread_ts):
+        """Extract links from all replies in a thread"""
+        try:
+            response = self.client.conversations_replies(
+                channel=self.channel_id,
+                ts=thread_ts,
+                limit=200  # Slack API limit
+            )
+            
+            replies = response.get('messages', [])
+            links_data = []
+            
+            # Skip the first message (parent) as it's already processed
+            for reply in replies[1:]:
+                # Skip bot messages
+                if reply.get('bot_id'):
+                    continue
+                
+                reply_links = self._extract_urls_from_single_message(reply)
+                # Mark these as thread replies
+                for link in reply_links:
+                    link['is_thread_reply'] = True
+                    link['parent_message_id'] = thread_ts
+                
+                links_data.extend(reply_links)
+            
+            if links_data:
+                logger.info(f"Found {len(links_data)} links in thread replies for message {thread_ts}")
+            
+            return links_data
+            
+        except SlackApiError as e:
+            logger.warning(f"Error fetching thread replies for {thread_ts}: {e.response['error']}")
+            return []
     
     def get_channel_info(self):
         """Get information about the channel"""

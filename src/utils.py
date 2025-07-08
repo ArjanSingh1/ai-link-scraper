@@ -22,27 +22,63 @@ def setup_logging(log_level="INFO", log_file="logs/app.log"):
     return logging.getLogger(__name__)
 
 def extract_urls_from_text(text):
-    """Extract URLs from text using regex"""
-    url_pattern = re.compile(
-        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-    )
-    urls = url_pattern.findall(text)
+    """Extract URLs from text using improved regex patterns"""
+    if not text:
+        return []
     
-    # Clean up URLs (remove trailing characters that Slack adds)
+    # Multiple patterns to catch different URL formats
+    patterns = [
+        # Standard HTTP/HTTPS URLs
+        r'https?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+        # URLs wrapped in angle brackets (common in Slack)
+        r'<(https?://[^>]+)>',
+        # URLs with special characters that might be escaped
+        r'https?://[^\s<>"{}|\\^`\[\]]+',
+    ]
+    
+    urls = []
+    for pattern in patterns:
+        matches = re.findall(pattern, text)
+        if isinstance(matches[0], tuple) if matches else False:
+            # Extract from capturing groups
+            urls.extend([match[0] if isinstance(match, tuple) else match for match in matches])
+        else:
+            urls.extend(matches)
+    
+    # Clean up URLs
     cleaned_urls = []
     for url in urls:
-        # Remove trailing characters like > | ) ] etc that Slack formatting can add
-        url = re.sub(r'[>\|\)\]]+$', '', url)
+        # Remove Slack formatting and trailing punctuation
+        url = re.sub(r'^<|>$', '', url)  # Remove angle brackets
+        url = re.sub(r'[>\|\)\]\.,:;!?]+$', '', url)  # Remove trailing punctuation
+        url = re.sub(r'["\']$', '', url)  # Remove trailing quotes
+        
+        # Skip empty URLs
+        if not url or len(url) < 10:
+            continue
+            
         cleaned_urls.append(url)
+    
+    # Remove duplicates while preserving order
+    unique_urls = []
+    seen = set()
+    for url in cleaned_urls:
+        if url not in seen:
+            seen.add(url)
+            unique_urls.append(url)
     
     # Filter out common non-content URLs
     filtered_urls = []
-    skip_domains = ['slack.com', 'tenor.com', 'giphy.com', 't.co']
+    skip_domains = ['slack.com', 'tenor.com', 'giphy.com', 't.co', 'bit.ly/slack']
     
-    for url in cleaned_urls:
-        domain = urlparse(url).netloc.lower()
-        if not any(skip_domain in domain for skip_domain in skip_domains):
-            filtered_urls.append(url)
+    for url in unique_urls:
+        try:
+            domain = urlparse(url).netloc.lower()
+            if not any(skip_domain in domain for skip_domain in skip_domains):
+                filtered_urls.append(url)
+        except:
+            # If URL parsing fails, skip it
+            continue
     
     return filtered_urls
 

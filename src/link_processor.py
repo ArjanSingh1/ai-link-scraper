@@ -183,28 +183,6 @@ class LinkProcessor:
                     self.drive_client.make_file_public(pdf_result['file_id'])
                     upload_results['pdf'] = pdf_result
             
-            # Upload HTML file
-            if processed_data.get('html_file'):
-                html_result = self.drive_client.upload_file(
-                    processed_data['html_file'], 
-                    folder_id,
-                    f"scraped_links_{datetime.now().strftime('%Y%m%d_%H%M')}.html"
-                )
-                if html_result:
-                    self.drive_client.make_file_public(html_result['file_id'])
-                    upload_results['html'] = html_result
-            
-            # Upload PDF file
-            if processed_data.get('pdf_file'):
-                pdf_result = self.drive_client.upload_file(
-                    processed_data['pdf_file'], 
-                    folder_id,
-                    f"scraped_links_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-                )
-                if pdf_result:
-                    self.drive_client.make_file_public(pdf_result['file_id'])
-                    upload_results['pdf'] = pdf_result
-            
             # Get folder link
             folder_link = self.drive_client.get_folder_link(folder_id)
             
@@ -387,9 +365,10 @@ class LinkProcessor:
                     writer = csv.DictWriter(f, fieldnames=items[0].keys())
                     writer.writeheader()
                     for item in items:
-                        # Convert tags list to string for CSV
+                        # Convert tags list to string for CSV (if tags exist)
                         row = item.copy()
-                        row['tags'] = ', '.join(row['tags']) if isinstance(row['tags'], list) else row['tags']
+                        if 'tags' in row:
+                            row['tags'] = ', '.join(row['tags']) if isinstance(row['tags'], list) else row['tags']
                         writer.writerow(row)
             
             logger.info(f"Saved CSV: {csv_file}")
@@ -458,7 +437,7 @@ class LinkProcessor:
 """
             
             for item in items:
-                tags_str = ', '.join(item['tags']) if isinstance(item['tags'], list) else item['tags']
+                tags_str = ', '.join(item['tags']) if 'tags' in item and isinstance(item['tags'], list) else item.get('tags', 'No tags')
                 html_content += f"""
         <tr>
             <td>{item.get('title', 'No Title')}</td>

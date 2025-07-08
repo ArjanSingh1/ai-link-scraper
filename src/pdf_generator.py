@@ -51,125 +51,117 @@ class PDFGenerator:
             
         styles = getSampleStyleSheet()
         
-        # Custom styles with modern design
-        styles.add(ParagraphStyle(
-            name='CustomTitle',
-            parent=styles['Title'],
-            fontSize=28,
-            spaceAfter=30,
-            textColor=HexColor('#1e293b'),
-            alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
-        ))
+        # Define custom styles with existence checks to avoid duplicates
+        custom_styles = [
+            ('CustomTitle', {
+                'parent': styles['Title'],
+                'fontSize': 28,
+                'spaceAfter': 30,
+                'textColor': HexColor('#1e293b'),
+                'alignment': TA_CENTER,
+                'fontName': 'Helvetica-Bold'
+            }),
+            ('Subtitle', {
+                'parent': styles['Normal'],
+                'fontSize': 14,
+                'spaceAfter': 20,
+                'textColor': HexColor('#64748b'),
+                'alignment': TA_CENTER,
+                'fontName': 'Helvetica'
+            }),
+            ('SectionTitle', {
+                'parent': styles['Heading2'],
+                'fontSize': 20,
+                'spaceBefore': 25,
+                'spaceAfter': 15,
+                'textColor': HexColor('#1e293b'),
+                'leftIndent': 0,
+                'fontName': 'Helvetica-Bold'
+            }),
+            ('LinkTitle', {
+                'parent': styles['Heading3'],
+                'fontSize': 14,
+                'spaceBefore': 20,
+                'spaceAfter': 8,
+                'textColor': HexColor('#3b82f6'),
+                'leftIndent': 0,
+                'fontName': 'Helvetica-Bold'
+            }),
+            ('LinkURL', {
+                'parent': styles['Normal'],
+                'fontSize': 9,
+                'spaceBefore': 5,
+                'spaceAfter': 8,
+                'textColor': HexColor('#3b82f6'),
+                'leftIndent': 20,
+                'fontName': 'Courier'
+            }),
+            ('Summary', {
+                'parent': styles['Normal'],
+                'fontSize': 10,
+                'spaceBefore': 8,
+                'spaceAfter': 12,
+                'alignment': TA_JUSTIFY,
+                'leftIndent': 20,
+                'rightIndent': 20,
+                'textColor': HexColor('#475569')
+            }),
+            ('MetaInfo', {
+                'parent': styles['Normal'],
+                'fontSize': 9,
+                'spaceBefore': 8,
+                'spaceAfter': 15,
+                'textColor': HexColor('#64748b'),
+                'leftIndent': 20
+            }),
+            ('TOCEntry', {
+                'parent': styles['Normal'],
+                'fontSize': 11,
+                'spaceBefore': 4,
+                'spaceAfter': 4,
+                'leftIndent': 10,
+                'textColor': HexColor('#1e293b')
+            }),
+            ('SectionHeader', {
+                'parent': styles['Normal'],
+                'fontSize': 12,
+                'spaceBefore': 15,
+                'spaceAfter': 8,
+                'textColor': HexColor('#1e40af'),
+                'leftIndent': 20,
+                'fontName': 'Helvetica-Bold'
+            }),
+            ('BulletPoint', {
+                'parent': styles['Normal'],
+                'fontSize': 10,
+                'spaceBefore': 3,
+                'spaceAfter': 3,
+                'leftIndent': 30,
+                'bulletIndent': 20,
+                'textColor': HexColor('#475569')
+            }),
+            ('BodyText', {
+                'parent': styles['Normal'],
+                'fontSize': 10,
+                'spaceBefore': 5,
+                'spaceAfter': 5,
+                'alignment': TA_JUSTIFY,
+                'leftIndent': 20,
+                'rightIndent': 20,
+                'textColor': HexColor('#475569')
+            })
+        ]
         
-        styles.add(ParagraphStyle(
-            name='Subtitle',
-            parent=styles['Normal'],
-            fontSize=14,
-            spaceAfter=20,
-            textColor=HexColor('#64748b'),
-            alignment=TA_CENTER,
-            fontName='Helvetica'
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='SectionTitle',
-            parent=styles['Heading2'],
-            fontSize=20,
-            spaceBefore=25,
-            spaceAfter=15,
-            textColor=HexColor('#1e293b'),
-            leftIndent=0,
-            fontName='Helvetica-Bold'
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='LinkTitle',
-            parent=styles['Heading3'],
-            fontSize=14,
-            spaceBefore=20,
-            spaceAfter=8,
-            textColor=HexColor('#3b82f6'),
-            leftIndent=0,
-            fontName='Helvetica-Bold'
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='LinkURL',
-            parent=styles['Normal'],
-            fontSize=9,
-            spaceBefore=5,
-            spaceAfter=8,
-            textColor=HexColor('#3b82f6'),
-            leftIndent=20,
-            fontName='Courier'
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='Summary',
-            parent=styles['Normal'],
-            fontSize=10,
-            spaceBefore=8,
-            spaceAfter=12,
-            alignment=TA_JUSTIFY,
-            leftIndent=20,
-            rightIndent=20,
-            textColor=HexColor('#475569')
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='MetaInfo',
-            parent=styles['Normal'],
-            fontSize=9,
-            spaceBefore=8,
-            spaceAfter=15,
-            textColor=HexColor('#64748b'),
-            leftIndent=20
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='TOCEntry',
-            parent=styles['Normal'],
-            fontSize=11,
-            spaceBefore=4,
-            spaceAfter=4,
-            leftIndent=10,
-            textColor=HexColor('#1e293b')
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='SectionHeader',
-            parent=styles['Normal'],
-            fontSize=12,
-            spaceBefore=15,
-            spaceAfter=8,
-            textColor=HexColor('#1e40af'),
-            leftIndent=20,
-            fontName='Helvetica-Bold'
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='BulletPoint',
-            parent=styles['Normal'],
-            fontSize=10,
-            spaceBefore=3,
-            spaceAfter=3,
-            leftIndent=30,
-            bulletIndent=20,
-            textColor=HexColor('#475569')
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='BodyText',
-            parent=styles['Normal'],
-            fontSize=10,
-            spaceBefore=5,
-            spaceAfter=5,
-            alignment=TA_JUSTIFY,
-            leftIndent=20,
-            rightIndent=20,
-            textColor=HexColor('#475569')
-        ))
+        # Add custom styles with existence checks
+        for style_name, style_props in custom_styles:
+            try:
+                # Check if style already exists
+                if style_name not in [s.name for s in styles.byName.values()]:
+                    styles.add(ParagraphStyle(name=style_name, **style_props))
+            except (ValueError, KeyError) as e:
+                # Style might already exist, skip it
+                logger.debug(f"Style '{style_name}' skipped: {e}")
+                pass
         
         return styles
     

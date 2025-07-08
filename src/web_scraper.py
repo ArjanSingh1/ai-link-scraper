@@ -26,6 +26,19 @@ class WebScraper:
             'x.com', 'twitter.com', 'linkedin.com', 'facebook.com', 
             'instagram.com', 'tiktok.com', 'reddit.com'
         }
+        
+        # Sites that need special headers to avoid blocking
+        self.anti_block_sites = {
+            'businesswire.com', 'prnewswire.com', 'globenewswire.com'
+        }
+        
+        # Alternative user agents for blocked sites
+        self.user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0'
+        ]
     
     def _is_js_dependent_site(self, url):
         """Check if URL is from a JavaScript-dependent site"""
@@ -40,6 +53,45 @@ class WebScraper:
             return False
         except:
             return False
+    
+    def _needs_anti_blocking(self, url):
+        """Check if URL is from a site that commonly blocks scrapers"""
+        try:
+            domain = urlparse(url).netloc.lower()
+            # Remove www. prefix if present
+            domain = domain.replace('www.', '')
+            
+            for block_site in self.anti_block_sites:
+                if block_site in domain:
+                    return True
+            return False
+        except:
+            return False
+    
+    def _get_enhanced_headers(self, url, attempt=0):
+        """Get enhanced headers for anti-blocking"""
+        domain = urlparse(url).netloc.lower()
+        
+        headers = {
+            'User-Agent': self.user_agents[attempt % len(self.user_agents)],
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
+        }
+        
+        # Add referer for certain sites
+        if 'businesswire.com' in domain:
+            headers['Referer'] = 'https://www.google.com/'
+            
+        return headers
     
     def _detect_js_requirement(self, soup, url):
         """Detect if page requires JavaScript to function properly"""
@@ -141,9 +193,17 @@ class WebScraper:
     
     def _fetch_with_retry(self, url):
         """Fetch URL with retry logic"""
+        needs_anti_blocking = self._needs_anti_blocking(url)
+        
         for attempt in range(self.max_retries):
             try:
-                response = self.session.get(url, timeout=self.timeout)
+                # Use enhanced headers for blocking-prone sites
+                if needs_anti_blocking:
+                    headers = self._get_enhanced_headers(url, attempt)
+                    response = requests.get(url, headers=headers, timeout=self.timeout)
+                else:
+                    response = self.session.get(url, timeout=self.timeout)
+                
                 response.raise_for_status()
                 return response
                 

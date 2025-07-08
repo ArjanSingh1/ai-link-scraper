@@ -79,3 +79,6 @@ venv.bak/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Embedded repositories
+b2bvault-repo/
