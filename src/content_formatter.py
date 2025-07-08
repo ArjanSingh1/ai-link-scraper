@@ -178,59 +178,66 @@ Response format (JSON):
             max_tokens = min(16000, max(8000, content_tokens + 2000))
             
             prompt = f"""
-This is an ARTICLE. Your task is to transcribe and format the COMPLETE article for a PDF report.
+Transform this ARTICLE into a highly readable, well-structured format using bullet points, headers, and clear organization.
 
-CRITICAL REQUIREMENTS:
-- NEVER summarize, truncate, or omit ANY part of the article content
-- Include EVERY sentence, paragraph, and detail from the original
-- Only clean up formatting artifacts and improve readability
-- Generate ultra-specific, detailed tags based on the exact content
+REFORMATTING REQUIREMENTS:
+1. **PRESERVE ALL KEY INFORMATION** - Don't lose important details or data
+2. **USE BULLET POINTS** extensively for lists, key points, features, benefits, steps, etc.
+3. **CREATE CLEAR STRUCTURE** with headers, subheaders, and logical sections
+4. **MAKE IT SCANNABLE** - easy to quickly find specific information
+5. **CONDENSE WORDINESS** - remove redundant phrases while keeping all facts
+6. **IMPROVE FLOW** - reorganize content for better logical progression
+7. **HIGHLIGHT IMPORTANT DETAILS** - use formatting to emphasize key points
+8. **MANDATORY SPACING** - Double line breaks (\\n\\n) between ALL sections and paragraphs
 
-FORMATTING TASKS - CRITICAL SPACING REQUIREMENTS:
-1. Remove unicode artifacts: ■□▪▫●○◆◇ and similar characters
-2. **MANDATORY**: Add double line breaks (\\n\\n) between ALL paragraphs
-3. **MANDATORY**: Break up any paragraph longer than 5 sentences into smaller paragraphs
-4. **MANDATORY**: Add spacing around lists, bullet points, and sections (\\n\\n before and after)
-5. **MANDATORY**: Ensure no paragraph runs for more than 8-10 lines without a break
-6. Add proper spacing after headings and subheadings
-7. Improve sentence flow and readability with better punctuation spacing
-8. Preserve ALL original information and context - DO NOT SUMMARIZE
+FORMATTING STYLE - NO MARKDOWN HEADERS:
+- Use **BOLD TEXT** for main sections (no ##)
+- Use bullet points (•) for lists and key points
+- Use numbered lists for steps/processes
+- Use **bold** for important terms or concepts
+- Ensure double spacing (\\n\\n) between ALL sections
+- Keep paragraphs short (2-3 sentences max)
 
 SPACING EXAMPLE:
-First paragraph with sentences.
+**Main Topic**
 
-Second paragraph starts here after double line break.
+Brief introduction paragraph here.
 
-Third paragraph continues the content.
+Key points:
+• First important point
+• Second important point
+• Third important point
 
-- Bullet point with proper spacing
-- Another bullet point
+**Next Section**
 
-Final paragraph after the list.
+Another paragraph with details.
 
+More information here.
+
+CONTENT TO REFORMAT:
 TITLE: {title}
 URL: {url}
 
-COMPLETE ARTICLE CONTENT TO TRANSCRIBE AND FORMAT:
+ORIGINAL ARTICLE:
 {content}
+
+Transform this into a well-organized, scannable format that's 20-30% shorter but retains ALL important information.
 
 Response format (JSON):
 {{
     "content_type": "article",
-    "formatted_content": "[COMPLETE formatted article with mandatory double spacing between paragraphs and broken up long paragraphs]",
-    "article_summary": "One sentence describing what this article is about",
+    "formatted_content": "[Completely reformatted article with bullets, headers, and clear structure]",
+    "article_summary": "One sentence describing what this article covers",
     "content_complete": true,
     "word_count_original": {len(content.split())},
-    "formatting_notes": "Brief note about spacing and formatting improvements made"
+    "formatting_notes": "Description of structural improvements made"
 }}
-
-REMINDER: The formatted_content MUST contain the complete article. Do not create a summary - transcribe the entire content with better formatting.
 """
             
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are an expert content formatter specializing in article readability. Your mission: 1) Preserve EVERY word of the original article, 2) Add mandatory double line breaks between ALL paragraphs, 3) Break up any paragraph longer than 5 sentences, 4) Ensure excellent readability with proper spacing. Never summarize - only improve formatting and spacing. Always respond with valid JSON."},
+                    {"role": "system", "content": "You are an expert content restructuring specialist. Transform articles into highly readable, well-organized formats using bullet points, clear headers, and logical structure. Preserve all important information while making content more scannable and easier to digest. Focus on clarity and organization over word count."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=max_tokens,
@@ -364,25 +371,30 @@ Generate comprehensive metadata as JSON:
             
             for i, chunk in enumerate(content_chunks):
                 chunk_prompt = f"""
-Format this chunk of a larger article. Keep ALL content exactly as provided, only clean formatting:
+Reformat this chunk of a larger article using bullet points and clear structure.
+
+FORMATTING REQUIREMENTS:
+• Use bullet points for lists and key information
+• Add ## headers for major sections
+• Use **bold** for important terms
+• Make content scannable and well-organized
+• Preserve all important details
 
 CHUNK {i+1}/{len(content_chunks)} of article: {title}
 
-Content to format:
+Content to reformat:
 {chunk}
 
 Return JSON:
 {{
-    "formatted_chunk": "[cleaned content with improved paragraph spacing - no changes to actual text]"
+    "formatted_chunk": "[Reformatted content with bullets, headers, and clear structure]"
 }}
-
-Clean formatting artifacts, improve paragraph spacing, but preserve every word and detail.
 """
                 
                 response = self.client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role": "system", "content": "Format article chunks while preserving all content. Focus on paragraph spacing and readability. Only clean artifacts, never summarize."},
+                        {"role": "system", "content": "You are an expert at reformatting content with bullet points and clear structure. Transform dense text into scannable, well-organized content while preserving all important information."},
                         {"role": "user", "content": chunk_prompt}
                     ],
                     max_tokens=4000,
@@ -416,7 +428,7 @@ Clean formatting artifacts, improve paragraph spacing, but preserve every word a
                 "word_count_original": original_word_count,
                 "word_count_formatted": formatted_word_count,
                 "completeness_ratio": formatted_word_count / original_word_count,
-                "formatting_notes": f"Processed in {len(content_chunks)} chunks to preserve full content with improved spacing"
+                "formatting_notes": f"Processed in {len(content_chunks)} chunks with bullet points and structural improvements"
             }
             
         except Exception as e:
@@ -424,60 +436,96 @@ Clean formatting artifacts, improve paragraph spacing, but preserve every word a
             return self._basic_format_full_article(content, title, url)
 
     def _basic_format_full_article(self, content: str, title: str, url: str) -> Dict[str, Any]:
-        """Basic full article formatting without OpenAI API"""
-        # Clean the content using the same comprehensive logic as web scraper
+        """Basic article formatting with improved structure and readability"""
         import re
         
-        # Remove unicode box characters and other formatting artifacts (comprehensive)
-        cleaned_content = re.sub(r'[■□▪▫●○◆◇▲△▼▽★☆♦♧♢♤♠♡♣♥]', '', content)  # Basic symbols
-        cleaned_content = re.sub(r'[\u2580-\u259F]', '', cleaned_content)  # Block characters
-        cleaned_content = re.sub(r'[\u25A0-\u25FF]', '', cleaned_content)  # Geometric shapes
-        cleaned_content = re.sub(r'[\u2600-\u26FF]', '', cleaned_content)  # Miscellaneous symbols
-        cleaned_content = re.sub(r'[\u2700-\u27BF]', '', cleaned_content)  # Dingbats
-        cleaned_content = re.sub(r'[\u2190-\u21FF]', '', cleaned_content)  # Arrows
-        cleaned_content = re.sub(r'[\u2500-\u257F]', '', cleaned_content)  # Box drawing characters
+        # Remove unicode box characters and other formatting artifacts
+        cleaned_content = re.sub(r'[■□▪▫●○◆◇▲△▼▽★☆♦♧♢♤♠♡♣♥]', '', content)
+        cleaned_content = re.sub(r'[\u2580-\u259F]', '', cleaned_content)
+        cleaned_content = re.sub(r'[\u25A0-\u25FF]', '', cleaned_content)
+        cleaned_content = re.sub(r'[\u2600-\u26FF]', '', cleaned_content)
+        cleaned_content = re.sub(r'[\u2700-\u27BF]', '', cleaned_content)
+        cleaned_content = re.sub(r'[\u2190-\u21FF]', '', cleaned_content)
+        cleaned_content = re.sub(r'[\u2500-\u257F]', '', cleaned_content)
         
         # Remove specific problematic characters
-        cleaned_content = re.sub(r'[‌‍‎‏]', '', cleaned_content)  # Zero-width characters
-        cleaned_content = re.sub(r'[\uFEFF]', '', cleaned_content)  # Byte order mark
-        cleaned_content = re.sub(r'[\u200B-\u200D]', '', cleaned_content)  # Zero-width spaces
+        cleaned_content = re.sub(r'[‌‍‎‏]', '', cleaned_content)
+        cleaned_content = re.sub(r'[\uFEFF]', '', cleaned_content)
+        cleaned_content = re.sub(r'[\u200B-\u200D]', '', cleaned_content)
         
-        # Better paragraph spacing and readability - ENHANCED
-        cleaned_content = re.sub(r'\n{3,}', '\n\n', cleaned_content)  # Max 2 line breaks
-        cleaned_content = re.sub(r'([.!?])\s*\n([A-Z])', r'\1\n\n\2', cleaned_content)  # Paragraph breaks
-        cleaned_content = re.sub(r'([.!?])\s*([A-Z])', r'\1 \2', cleaned_content)  # Space after sentences
+        # Enhanced structure and readability improvements
+        cleaned_content = re.sub(r'\n{3,}', '\n\n', cleaned_content)
+        cleaned_content = re.sub(r'([.!?])\s*\n([A-Z])', r'\1\n\n\2', cleaned_content)
+        cleaned_content = re.sub(r'([.!?])\s*([A-Z])', r'\1 \2', cleaned_content)
         
-        # Break up very long paragraphs for much better readability
+        # Basic structure improvements - add bullet points for lists
+        lines = cleaned_content.split('\n')
+        improved_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                improved_lines.append('')
+                continue
+                
+            # Convert numbered lists to bullet points
+            if re.match(r'^\d+\.?\s+', line):
+                line = re.sub(r'^\d+\.?\s+', '• ', line)
+            
+            # Add bullet points to lines that look like list items
+            elif (line.startswith('-') or line.startswith('*')) and len(line) > 5:
+                line = '• ' + line[1:].strip()
+            
+            # Identify potential section headers (short lines, often capitalized)
+            elif (len(line) < 80 and 
+                  line[0].isupper() and 
+                  not line.endswith('.') and 
+                  not line.startswith('•') and
+                  len([c for c in line if c.isupper()]) > len(line) * 0.3):
+                line = f"## {line}"
+            
+            improved_lines.append(line)
+        
+        cleaned_content = '\n'.join(improved_lines)
+        
+        # Create a more structured format even without OpenAI
+        structured_content = f"**{title}**\n\n"
+        
+        # Break up very long paragraphs with better structure
         paragraphs = cleaned_content.split('\n\n')
-        improved_paragraphs = []
+        structured_paragraphs = []
         
         for para in paragraphs:
-            if len(para) > 400:  # Break up long paragraphs (reduced threshold)
-                sentences = para.split('. ')
-                current_chunk = ""
-                sentence_count = 0
+            para = para.strip()
+            if not para:
+                continue
                 
-                for sentence in sentences:
-                    if sentence_count < 4 and len(current_chunk + sentence + '. ') < 250:  # Max 4 sentences per paragraph
-                        current_chunk += sentence + '. '
-                        sentence_count += 1
-                    else:
-                        if current_chunk:
-                            improved_paragraphs.append(current_chunk.strip())
-                        current_chunk = sentence + '. '
-                        sentence_count = 1
-                        
-                if current_chunk:
-                    improved_paragraphs.append(current_chunk.strip())
+            # If paragraph is very long, break it up with bullet points
+            if len(para) > 500 and '. ' in para:
+                sentences = para.split('. ')
+                if len(sentences) > 4:
+                    # Convert long paragraph to bullet points
+                    structured_paragraphs.append("Key points:")
+                    for sentence in sentences[:6]:  # Take first 6 sentences
+                        if len(sentence.strip()) > 20:
+                            structured_paragraphs.append(f"• {sentence.strip()}.")
+                    
+                    # Add remaining sentences as a paragraph if any
+                    if len(sentences) > 6:
+                        remaining = '. '.join(sentences[6:])
+                        if len(remaining.strip()) > 20:
+                            structured_paragraphs.append(remaining.strip())
+                else:
+                    structured_paragraphs.append(para)
             else:
-                improved_paragraphs.append(para)
+                structured_paragraphs.append(para)
         
-        cleaned_content = '\n\n'.join(improved_paragraphs)
+        cleaned_content = '\n\n'.join([structured_content] + structured_paragraphs)
         
         # Clean up spacing
-        cleaned_content = re.sub(r'[ \t]+', ' ', cleaned_content)  # Multiple spaces to single
-        cleaned_content = re.sub(r'\n[ \t]+', '\n', cleaned_content)  # Remove leading whitespace
-        cleaned_content = re.sub(r'[ \t]+\n', '\n', cleaned_content)  # Remove trailing whitespace
+        cleaned_content = re.sub(r'[ \t]+', ' ', cleaned_content)
+        cleaned_content = re.sub(r'\n[ \t]+', '\n', cleaned_content)
+        cleaned_content = re.sub(r'[ \t]+\n', '\n', cleaned_content)
         
         return {
             "formatted_content": cleaned_content.strip(),
@@ -485,7 +533,7 @@ Clean formatting artifacts, improve paragraph spacing, but preserve every word a
             "word_count_original": len(content.split()),
             "word_count_formatted": len(cleaned_content.split()),
             "content_complete": True,
-            "formatting_notes": "Enhanced formatting: removed artifacts, improved paragraph spacing, broke up long paragraphs"
+            "formatting_notes": "Enhanced structure: added bullet points, headers, improved paragraph organization"
         }
     
     def _basic_format_csv_full(self, content: str, title: str, url: str) -> Dict[str, Any]:

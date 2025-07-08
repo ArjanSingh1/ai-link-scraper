@@ -83,7 +83,6 @@ class LinkProcessor:
                 item = {
                     'url': url,
                     'title': title,
-                    'tags': csv_formatted.get('tags', self._generate_lightweight_tags(scraped)),
                     'category': csv_formatted.get('category', 'General'),
                     'word_count': scraped.get('word_count', 0),
                     'scraped_at': datetime.now().isoformat(),

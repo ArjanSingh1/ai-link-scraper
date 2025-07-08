@@ -137,6 +137,40 @@ class PDFGenerator:
             textColor=HexColor('#1e293b')
         ))
         
+        styles.add(ParagraphStyle(
+            name='SectionHeader',
+            parent=styles['Normal'],
+            fontSize=12,
+            spaceBefore=15,
+            spaceAfter=8,
+            textColor=HexColor('#1e40af'),
+            leftIndent=20,
+            fontName='Helvetica-Bold'
+        ))
+        
+        styles.add(ParagraphStyle(
+            name='BulletPoint',
+            parent=styles['Normal'],
+            fontSize=10,
+            spaceBefore=3,
+            spaceAfter=3,
+            leftIndent=30,
+            bulletIndent=20,
+            textColor=HexColor('#475569')
+        ))
+        
+        styles.add(ParagraphStyle(
+            name='BodyText',
+            parent=styles['Normal'],
+            fontSize=10,
+            spaceBefore=5,
+            spaceAfter=5,
+            alignment=TA_JUSTIFY,
+            leftIndent=20,
+            rightIndent=20,
+            textColor=HexColor('#475569')
+        ))
+        
         return styles
     
     def generate_link_report_pdf(self, data: List[Dict[str, Any]], 
@@ -283,9 +317,13 @@ class PDFGenerator:
                     else:
                         content_header = "📄 Full Article Content:"
                     
-                    # Don't truncate - use the full formatted content
-                    content_text = f"<b>{content_header}</b><br/><br/>{content}"
-                    story.append(Paragraph(content_text, self.styles['Summary']))
+                    # Add content header
+                    story.append(Paragraph(f"<b>{content_header}</b>", self.styles['SectionHeader']))
+                    story.append(Spacer(1, 10))
+                    
+                    # Use proper formatting for the content
+                    formatted_elements = self._convert_formatted_content_to_pdf(content)
+                    story.extend(formatted_elements)
             
             # Metadata with icons and better formatting - prioritize sender and date
             meta_items = []
@@ -830,6 +868,71 @@ class PDFGenerator:
         
         return '\n'.join(formatted_paragraphs)
     
+    def _convert_formatted_content_to_pdf(self, content):
+        """Convert formatted content with markdown-style formatting to PDF elements"""
+        if not content:
+            return []
+        
+        import re
+        elements = []
+        
+        # Split content into sections by double line breaks
+        sections = content.split('\n\n')
+        
+        for section in sections:
+            section = section.strip()
+            if not section:
+                continue
+            
+            # Check if this is a bold header (**Text**)
+            if section.startswith('**') and section.endswith('**') and len(section.split('\n')) == 1:
+                header_text = section.strip('*')
+                elements.append(Paragraph(f"<b>{header_text}</b>", self.styles['SectionHeader']))
+                elements.append(Spacer(1, 12))
+                
+            # Check if this contains bullet points
+            elif '•' in section:
+                lines = section.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line.startswith('•'):
+                        bullet_text = line[1:].strip()
+                        # Handle bold text within bullets
+                        bullet_text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', bullet_text)
+                        elements.append(Paragraph(f"• {bullet_text}", self.styles['BulletPoint']))
+                    elif line and not line.startswith('•'):
+                        # Regular text within bullet section
+                        line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
+                        elements.append(Paragraph(line, self.styles['BodyText']))
+                elements.append(Spacer(1, 8))
+                
+            # Check if this is a numbered list
+            elif re.match(r'^\d+\.', section):
+                lines = section.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if re.match(r'^\d+\.', line):
+                        # Handle bold text within numbered items
+                        line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
+                        elements.append(Paragraph(line, self.styles['BulletPoint']))
+                    elif line:
+                        # Regular text within numbered section
+                        line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
+                        elements.append(Paragraph(line, self.styles['BodyText']))
+                elements.append(Spacer(1, 8))
+                
+            else:
+                # Regular paragraph - handle bold formatting
+                lines = section.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line:
+                        # Convert **bold** to <b>bold</b>
+                        line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
+                        elements.append(Paragraph(line, self.styles['BodyText']))
+                elements.append(Spacer(1, 10))
+        
+        return elements
 
 
 def create_pdf_report(data: List[Dict[str, Any]], 
