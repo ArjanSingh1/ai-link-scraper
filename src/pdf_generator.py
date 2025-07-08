@@ -137,16 +137,6 @@ class PDFGenerator:
             textColor=HexColor('#1e293b')
         ))
         
-        styles.add(ParagraphStyle(
-            name='TagStyle',
-            parent=styles['Normal'],
-            fontSize=8,
-            spaceBefore=5,
-            spaceAfter=5,
-            textColor=HexColor('#3b82f6'),
-            leftIndent=20
-        ))
-        
         return styles
     
     def generate_link_report_pdf(self, data: List[Dict[str, Any]], 
@@ -280,20 +270,21 @@ class PDFGenerator:
                 url_text = f"🔗 {display_url}"
                 story.append(Paragraph(url_text, self.styles['LinkURL']))
             
-            # Tags with visual styling
-            if item.get('tags'):
-                tags = item['tags'] if isinstance(item['tags'], list) else [item['tags']]
-                tags_text = "🏷️ Tags: " + " • ".join([f"<b>#{tag}</b>" for tag in tags])
-                story.append(Paragraph(tags_text, self.styles['TagStyle']))
-            
             # Content/Summary with better presentation
             if include_content:
-                content = item.get('content_preview', item.get('summary', ''))
+                # Use the formatted content from OpenAI if available, otherwise fallback to summary
+                content = item.get('formatted_content', item.get('content_preview', item.get('summary', '')))
+                content_type = item.get('content_type', 'article')
+                
                 if content and len(content.strip()) > 0:
-                    # Truncate content if too long
-                    if len(content) > 500:
-                        content = content[:497] + "..."
-                    content_text = f"<b>📝 Content Preview:</b><br/><br/>{content}"
+                    # Different headers based on content type
+                    if content_type == 'website':
+                        content_header = "🌐 Website Information:"
+                    else:
+                        content_header = "📄 Full Article Content:"
+                    
+                    # Don't truncate - use the full formatted content
+                    content_text = f"<b>{content_header}</b><br/><br/>{content}"
                     story.append(Paragraph(content_text, self.styles['Summary']))
             
             # Metadata with icons and better formatting - prioritize sender and date
@@ -646,22 +637,6 @@ class PDFGenerator:
             font-size: 10px;
         }}
         
-        .tags {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin: 0.75rem 0;
-        }}
-        
-        .tag {{
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 9px;
-            font-weight: 500;
-        }}
-        
         .footer {{
             margin-top: 3rem;
             text-align: center;
@@ -747,14 +722,6 @@ class PDFGenerator:
         <div class="link-item">
             <div class="link-title">{title_text}</div>
             <div class="link-url">🔗 {url}</div>'''
-            
-            # Tags
-            if item.get('tags'):
-                tags = item['tags'] if isinstance(item['tags'], list) else [item['tags']]
-                html += '<div class="tags">'
-                for tag in tags:
-                    html += f'<span class="tag">#{tag}</span>'
-                html += '</div>'
             
             # Content
             if include_content:

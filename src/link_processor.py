@@ -29,13 +29,11 @@ class LinkProcessor:
             main_folder = os.path.join(output_folder, f"AI_Links_Export_{timestamp}")
             os.makedirs(main_folder, exist_ok=True)
             
-            # Create organized subfolders
+            # Create organized subfolders - simplified
             subfolders = {
                 'csv': os.path.join(main_folder, '📊_CSV_Data'),
-                'json': os.path.join(main_folder, '🔗_JSON_Raw'),
                 'html': os.path.join(main_folder, '🌐_HTML_Preview'),
-                'pdf': os.path.join(main_folder, '📄_PDF_Report'),
-                'summaries': os.path.join(main_folder, '📝_Article_Summaries')
+                'pdf': os.path.join(main_folder, '📄_PDF_Report')
             }
             
             for folder in subfolders.values():
@@ -95,22 +93,24 @@ class LinkProcessor:
                     'slack_timestamp': slack_data['timestamp'].isoformat() if slack_data.get('timestamp') else None,
                     'slack_channel': slack_data.get('channel'),
                     
-                    # Content variations for different outputs - NO summaries or highlights
-                    'full_content': content,  # Full article content for both CSV and PDF
-                    'formatted_content': pdf_formatted.get('formatted_content', content)  # Cleaned full content
+                    # Content type classification and formatting
+                    'content_type': pdf_formatted.get('content_type', 'article'),
+                    'brief_description': pdf_formatted.get('brief_description', ''),
+                    'article_summary': pdf_formatted.get('article_summary', ''),
+                    
+                    # Content variations for different outputs
+                    'full_content': content,  # Original content
+                    'formatted_content': pdf_formatted.get('formatted_content', content),  # AI-formatted content
+                    'completeness_ratio': pdf_formatted.get('completeness_ratio', 1.0)
                 }
                 
                 processed_items.append(item)
                 logger.info(f"Processed: {item['title'][:50]}...")
             
-            # Save to organized files
+            # Save to organized files - simplified
             csv_file = self._save_as_csv(processed_items, subfolders['csv'])
-            json_file = self._save_as_json(processed_items, subfolders['json'])
             html_file = self._save_as_html(processed_items, subfolders['html'])
             pdf_file = self._save_as_pdf(processed_items, subfolders['pdf'])
-            
-            # Create a summary file with full articles in the summaries folder
-            summary_file = self._save_full_articles(processed_items, subfolders['summaries'])
             
             # Create a README file explaining the structure
             readme_file = self._create_readme(main_folder, len(processed_items))
@@ -118,10 +118,8 @@ class LinkProcessor:
             return {
                 'processed_items': processed_items,
                 'csv_file': csv_file,
-                'json_file': json_file,
                 'html_file': html_file,
                 'pdf_file': pdf_file,
-                'summary_file': summary_file,
                 'readme_file': readme_file,
                 'main_folder': main_folder,
                 'total_processed': len(processed_items)
@@ -164,16 +162,27 @@ class LinkProcessor:
                     self.drive_client.make_file_public(csv_result['file_id'])
                     upload_results['csv'] = csv_result
             
-            # Upload JSON file
-            if processed_data.get('json_file'):
-                json_result = self.drive_client.upload_file(
-                    processed_data['json_file'], 
+            # Upload HTML file
+            if processed_data.get('html_file'):
+                html_result = self.drive_client.upload_file(
+                    processed_data['html_file'], 
                     folder_id,
-                    f"scraped_links_{datetime.now().strftime('%Y%m%d_%H%M')}.json"
+                    f"scraped_links_{datetime.now().strftime('%Y%m%d_%H%M')}.html"
                 )
-                if json_result:
-                    self.drive_client.make_file_public(json_result['file_id'])
-                    upload_results['json'] = json_result
+                if html_result:
+                    self.drive_client.make_file_public(html_result['file_id'])
+                    upload_results['html'] = html_result
+            
+            # Upload PDF file
+            if processed_data.get('pdf_file'):
+                pdf_result = self.drive_client.upload_file(
+                    processed_data['pdf_file'], 
+                    folder_id,
+                    f"scraped_links_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+                )
+                if pdf_result:
+                    self.drive_client.make_file_public(pdf_result['file_id'])
+                    upload_results['pdf'] = pdf_result
             
             # Upload HTML file
             if processed_data.get('html_file'):
