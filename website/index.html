@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next"
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,16 +7,16 @@
     <title>B2B Sales Database</title>
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            --accent-color: #667eea;
-            --text-primary: #2c3e50;
-            --text-secondary: #7f8c8d;
-            --bg-white: #ffffff;
-            --bg-light: #f8f9fa;
-            --border-color: #e9ecef;
-            --shadow-light: 0 4px 16px rgba(0,0,0,0.1);
-            --shadow-hover: 0 8px 32px rgba(0,0,0,0.15);
+            --primary-gradient: linear-gradient(135deg, #3e3e3f 0%, #29282d 100%);
+            --secondary-gradient: linear-gradient(135deg, #2c3e50 0%, #112130 100%);
+            --accent-color: #444d75;
+            --text-primary: #a3a7ab;
+            --text-secondary: #c2c7f3;
+            --bg-white: #1b1d27;
+            --bg-light: #27282a;
+            --border-color: #3c3c3c;
+            --shadow-light: 0 4px 16px rgba(143, 140, 140, 0.1);
+            --shadow-hover: 0 8px 32px rgba(44, 44, 44, 0.15);
         }
 
         * {
@@ -765,10 +766,11 @@
                     
                     <div class="category-filter" style="margin-top: 1rem;">
                         <button class="category-btn active" onclick="filterB2BArticles('All')">All</button>
-                        <button class="category-btn" onclick="filterB2BArticles('Sales')">Sales</button>
-                        <button class="category-btn" onclick="filterB2BArticles('Marketing')">Marketing</button>
+                        <button class="category-btn" onclick="filterB2BArticles('Content Marketing')">Content Marketing</button>
+                        <button class="category-btn" onclick="filterB2BArticles('Product Marketing')">Product Marketing</button>
                         <button class="category-btn" onclick="filterB2BArticles('AI')">AI</button>
                         <button class="category-btn" onclick="filterB2BArticles('ABM & GTM')">ABM & GTM</button>
+                        <button class="category-btn" onclick="filterB2BArticles('General')">General</button>
                     </div>
                 </div>
 
@@ -888,6 +890,9 @@
         // Add event listeners for real-time search
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('links-search');
+            const categoryFilter = document.getElementById('category-filter');
+            const startDateFilter = document.getElementById('start-date');
+            const endDateFilter = document.getElementById('end-date');
             let searchTimeout;
             
             searchInput.addEventListener('input', function() {
@@ -895,6 +900,19 @@
                 searchTimeout = setTimeout(() => {
                     loadAILinks();
                 }, 500); // Debounce search
+            });
+            
+            // Add change listeners for filters
+            categoryFilter.addEventListener('change', function() {
+                loadAILinks();
+            });
+            
+            startDateFilter.addEventListener('change', function() {
+                loadAILinks();
+            });
+            
+            endDateFilter.addEventListener('change', function() {
+                loadAILinks();
             });
             
             // Set default date range (last week)
@@ -957,7 +975,7 @@
                         </div>
                         <div class="card-content">
                             <p><strong>Content Type:</strong> ${link.content_type || 'Article'}</p>
-                            ${link.brief_description ? `<p><strong>Description:</strong> ${link.brief_description}</p>` : ''}
+                            ${link.brief_description && link.brief_description.trim() ? `<p><strong>Context:</strong> ${link.brief_description}</p>` : ''}
                         </div>
                         <div class="card-actions">
                             <a href="${link.url}" target="_blank" class="btn btn-primary">📖 Read Article</a>
