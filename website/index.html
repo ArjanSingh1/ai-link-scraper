@@ -7,16 +7,46 @@ import { Analytics } from "@vercel/analytics/next"
     <title>B2B Sales Database</title>
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #3e3e3f 0%, #29282d 100%);
-            --secondary-gradient: linear-gradient(135deg, #2c3e50 0%, #112130 100%);
-            --accent-color: #444d75;
-            --text-primary: #a3a7ab;
-            --text-secondary: #c2c7f3;
-            --bg-white: #1b1d27;
-            --bg-light: #27282a;
-            --border-color: #3c3c3c;
-            --shadow-light: 0 4px 16px rgba(143, 140, 140, 0.1);
-            --shadow-hover: 0 8px 32px rgba(44, 44, 44, 0.15);
+            --primary-gradient: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            --secondary-gradient: linear-gradient(135deg, #1e40af 0%, #4338ca 100%);
+            --accent-color: #3b82f6;
+            --text-primary: #e2e8f0;
+            --text-secondary: #cbd5e1;
+            --bg-white: #0f172a;
+            --bg-light: #1e293b;
+            --border-color: #334155;
+            --shadow-light: 0 4px 16px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        body {
+            background: #0a0f1c;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+        }
+
+        .tab-nav button {
+            color: #94a3b8;
+        }
+
+        .tab-nav button:hover {
+            background: #334155;
+        }
+
+        .tab-nav button.active {
+            background: #334155;
+        }
+
+        .search-input, .filter-select, .filter-input {
+            background: #1e293b;
+            color: #e2e8f0;
+            border-color: #475569;
+        }
+
+        .search-input:focus, .filter-select:focus, .filter-input:focus {
+            border-color: #3b82f6;
         }
 
         * {
@@ -975,7 +1005,18 @@ import { Analytics } from "@vercel/analytics/next"
                         </div>
                         <div class="card-content">
                             <p><strong>Content Type:</strong> ${link.content_type || 'Article'}</p>
-                            ${link.brief_description && link.brief_description.trim() ? `<p><strong>Context:</strong> ${link.brief_description}</p>` : ''}
+                            ${link.brief_description && link.brief_description.trim() ? `
+                                <div style="margin-top: 1rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--accent-color); border-radius: 6px; position: relative;">
+                                    <div style="position: absolute; top: 0.5rem; left: 0.5rem; font-size: 1.5rem; color: var(--accent-color); opacity: 0.3;">"</div>
+                                    <p style="margin: 0; color: var(--text-secondary); font-style: italic; padding-left: 1rem;">
+                                        <strong>Context:</strong> "${link.brief_description}"
+                                    </p>
+                                    <div style="position: absolute; bottom: 0.25rem; right: 0.75rem; font-size: 1.5rem; color: var(--accent-color); opacity: 0.3;">"</div>
+                                </div>
+                                <div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary); opacity: 0.7; text-align: center;">
+                                    <em>Quote from original LinkedIn message</em>
+                                </div>
+                            ` : ''}
                         </div>
                         <div class="card-actions">
                             <a href="${link.url}" target="_blank" class="btn btn-primary">📖 Read Article</a>
