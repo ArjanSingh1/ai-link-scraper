@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>B2B Sales Intelligence Platform</title>
+    <title>B2B Sales Database</title>
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -579,8 +579,26 @@
             color: var(--accent-color);
         }
         
+        .content-card .card-author-large {
+            font-weight: 500;
+            color: var(--accent-color);
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 12px;
+        }
+        
         .content-card .card-date {
             color: var(--text-secondary);
+        }
+        
+        .content-card .card-date-large {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(107, 114, 128, 0.1);
+            border-radius: 12px;
         }
         
         .content-card .card-category {
@@ -618,16 +636,16 @@
 <body>
     <div class="header">
         <div class="container">
-            <h1>🚀 B2B Sales Intelligence Platform</h1>
-            <p>Unified platform for AI-powered link analysis and B2B sales intelligence</p>
+            <h1>🚀 B2B Sales Database</h1>
+            <p>Platform for InstaLILY's AI-powered article analysis</p>
         </div>
     </div>
 
     <div class="container">
         <nav class="tab-navigation">
             <ul class="tab-nav">
-                <li><button class="tab-button active" data-tab="ai-links">📊 AI Links Hub</button></li>
-                <li><button class="tab-button" data-tab="b2b-vault">🎯 B2B Vault Intelligence</button></li>
+                <li><button class="tab-button active" data-tab="ai-links">📊 AI-Links</button></li>
+                <li><button class="tab-button" data-tab="b2b-vault">🎯 B2B Vault</button></li>
             </ul>
         </nav>
 
@@ -688,10 +706,9 @@
         <!-- B2B Vault Intelligence Tab -->
         <div id="b2b-vault" class="tab-content">
             <div class="container">
-                <h2 style="margin-bottom: 1rem; color: var(--text-primary);">🎯 B2B Vault Intelligence</h2>
+                <h2 style="margin-bottom: 1rem; color: var(--text-primary);">🎯 B2B Vault</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Advanced B2B content analysis and intelligence gathering from B2B Vault. 
-                    Access curated sales and marketing insights from top industry sources.
+                    Articles picked out from B2B Vault, a platform for B2B articles, insights, and resources.
                 </p>
 
                 <!-- B2B Vault Stats -->
@@ -768,7 +785,7 @@
 
     <div class="footer">
         <div class="container">
-            <p>&copy; 2025 B2B Sales Intelligence Platform | Powered by AI Link Scraper + B2B Vault</p>
+            <p>&copy; 2025 B2B Sales Platform, InstaLILY | Powered by AI Link Scraper + B2B Vault</p>
         </div>
     </div>
 
@@ -908,7 +925,7 @@
             }
 
             container.innerHTML = data.map(link => {
-                // Format the date
+                // Format the date with time
                 const sharedDate = link.date_shared || link.date_scraped || '';
                 let displayDate = '';
                 if (sharedDate) {
@@ -918,6 +935,10 @@
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric'
+                        }) + ' at ' + date.toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
                         });
                     } catch {
                         displayDate = sharedDate.split('T')[0]; // Fallback to ISO date
@@ -929,19 +950,17 @@
                         <h3 class="card-title">${link.title}</h3>
                         <div class="card-meta">
                             <span class="card-category">${link.category || 'General'}</span>
-                            <span class="card-author">� ${link.slack_user || 'Unknown'}</span>
-                            <span class="card-date">📅 ${displayDate}</span>
-                            <span>� ${(link.word_count || 0).toLocaleString()} words</span>
+                            <span class="card-author-large">👤 ${link.slack_user || 'Unknown'}</span>
+                            <span class="card-date-large">📅 ${displayDate}</span>
+                            <span>📊 ${(link.word_count || 0).toLocaleString()} words</span>
                             <span>🌐 ${link.domain}</span>
                         </div>
                         <div class="card-content">
-                            <p><strong>URL:</strong> <a href="${link.url}" target="_blank">${link.url}</a></p>
                             <p><strong>Content Type:</strong> ${link.content_type || 'Article'}</p>
                             ${link.brief_description ? `<p><strong>Description:</strong> ${link.brief_description}</p>` : ''}
                         </div>
                         <div class="card-actions">
                             <a href="${link.url}" target="_blank" class="btn btn-primary">📖 Read Article</a>
-                            <button class="btn btn-secondary" onclick="viewDetails('${link.url}')">📊 View Details</button>
                         </div>
                     </div>
                 `;
@@ -1096,16 +1115,20 @@
                     <div class="content-card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
                         <h3 style="color: var(--text-secondary); margin-bottom: 1rem;">No B2B Vault Articles Available</h3>
                         <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                            The scraper was unable to find articles on the B2B Vault website. This could be due to:
+                            The demo articles are not loading properly. This could be due to:
                         </p>
-                        <ul style="color: var(--text-secondary); text-align: left; max-width: 400px; margin: 0 auto 2rem auto;">
-                            <li>Website structure changes</li>
-                            <li>Network connectivity issues</li>
-                            <li>Anti-scraping protection</li>
-                            <li>Scraping logic needs updates</li>
+                        <ul style="color: var(--text-secondary); text-align: left; max-width: 500px; margin: 0 auto 2rem auto;">
+                            <li>Serverless deployment limitations</li>
+                            <li>Missing dependencies in the deployed environment</li>
+                            <li>Database initialization issues</li>
+                            <li>Network connectivity problems</li>
                         </ul>
-                        <button class="btn btn-primary" onclick="loadB2BArticles()">
-                            🔄 Try Again
+                        <div style="margin-bottom: 2rem; padding: 1rem; background: var(--bg-secondary); border-radius: 8px; color: var(--text-secondary);">
+                            <strong>💡 Note:</strong> Live B2B Vault scraping is only available when running locally. 
+                            The deployed version loads curated demo articles automatically.
+                        </div>
+                        <button class="btn btn-primary" onclick="retryB2BData()">
+                            🔄 Retry Loading
                         </button>
                     </div>
                 `;
@@ -1163,6 +1186,13 @@
             loadB2BArticles();
         }
         
+        function retryB2BData() {
+            // Clear any existing articles and reload
+            const container = document.getElementById('b2b-articles-container');
+            container.innerHTML = '<div class="status-message">Loading B2B Vault articles...</div>';
+            loadB2BArticles();
+        }
+        
         function startB2BScraping() {
             const tags = selectedB2BCategories.length > 0 ? selectedB2BCategories : ['All'];
             
@@ -1182,12 +1212,17 @@
                     alert('B2B scraping started successfully!');
                     // Could add a status monitor here
                 } else {
-                    alert('Error starting B2B scraping: ' + data.error);
+                    // Show appropriate message for serverless limitations
+                    const message = data.info ? 
+                        `${data.message}\n\n${data.info}` : 
+                        `Error: ${data.message || data.error}`;
+                    
+                    alert(message);
                 }
             })
             .catch(error => {
                 console.error('Error starting B2B scraping:', error);
-                alert('Error starting B2B scraping');
+                alert('Error starting B2B scraping: ' + error.message);
             });
         }
         

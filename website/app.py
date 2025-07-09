@@ -262,6 +262,12 @@ class B2BVaultManager:
         if b2b_scraping_status['is_running']:
             return False, "Scraping is already running"
         
+        # Check if we're in a serverless environment
+        is_serverless = os.environ.get('VERCEL') or os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER')
+        
+        if is_serverless:
+            return False, "Live scraping is not available in serverless deployments. Demo articles are automatically loaded on startup."
+        
         def scraping_thread():
             try:
                 b2b_scraping_status['is_running'] = True
@@ -349,6 +355,46 @@ class B2BVaultManager:
         except Exception as e:
             self.logger.error(f"Error loading cached B2B Vault data: {e}")
             return []
+
+def generate_expanded_summary(content, title, category):
+    """Generate a more detailed 4-5 sentence summary from article content"""
+    # Extract key sentences from the content
+    sentences = content.split('. ')
+    
+    # Create a 4-5 sentence summary based on the content
+    if len(sentences) >= 4:
+        # Use the first few sentences and add category-specific insights
+        summary_parts = []
+        
+        # Add the main point
+        summary_parts.append(sentences[0].strip())
+        
+        # Add supporting details
+        if len(sentences) > 1:
+            summary_parts.append(sentences[1].strip())
+        
+        # Add category-specific insights
+        if category == "AI":
+            summary_parts.append("This represents a significant shift in how AI technology is being adopted across B2B marketing and sales operations.")
+        elif category == "Sales":
+            summary_parts.append("Sales teams implementing these strategies report measurable improvements in conversion rates and deal velocity.")
+        elif category == "ABM & GTM":
+            summary_parts.append("Account-based marketing approaches like this require alignment between sales and marketing teams for maximum effectiveness.")
+        elif category == "Content Marketing":
+            summary_parts.append("Content marketing strategies must evolve to meet changing buyer expectations and consumption patterns.")
+        else:
+            summary_parts.append("This approach demonstrates the importance of strategic thinking in modern B2B marketing.")
+        
+        # Add implementation insight
+        summary_parts.append("Companies that adopt these methods early often gain significant competitive advantages in their markets.")
+        
+        # Add future outlook
+        summary_parts.append("The trend toward more sophisticated, data-driven approaches will likely accelerate as technology continues to evolve.")
+        
+        return '. '.join(summary_parts[:5]) + '.'
+    else:
+        # Fallback for short content
+        return content[:200] + "..." if len(content) > 200 else content
 
 def scrape_b2b_vault():
     """Scrape real articles from B2B Vault website"""
@@ -905,10 +951,79 @@ def load_scraped_links():
 db = SalesIntelligenceDB(DATABASE_PATH)
 b2b_manager = B2BVaultManager(db)
 
+# Load initial data on import (for both local and serverless deployment)
+def initialize_data():
+    """Initialize data for the application"""
+    try:
+        # Load scraped AI links
+        load_scraped_links()
+        
+        # Check if we have B2B articles in the database
+        existing_articles = db.get_b2b_articles(limit=1)
+        
+        if not existing_articles:
+            print("🔄 Loading B2B Vault articles...")
+            
+            # Check if we're in a serverless environment (like Vercel)
+            is_serverless = os.environ.get('VERCEL') or os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER')
+            
+            if is_serverless:
+                print("🌐 Detected serverless environment - loading demo data")
+                # In serverless, always use demo data for reliability
+                try:
+                    if B2B_VAULT_AVAILABLE:
+                        integration = B2BVaultIntegration()
+                        demo_articles = integration.get_demo_articles("All", 20)
+                        for article in demo_articles:
+                            db.add_b2b_article(article)
+                        print(f"✅ Loaded {len(demo_articles)} demo B2B Vault articles for serverless")
+                    else:
+                        print("⚠️  B2B Vault integration not available")
+                except Exception as e:
+                    print(f"⚠️  Could not load demo data: {e}")
+            else:
+                print("🖥️  Local environment detected - attempting real scraping")
+                # In local environment, try real scraping first
+                try:
+                    real_articles = scrape_b2b_vault()
+                    for article in real_articles:
+                        db.add_b2b_article(article)
+                    print(f"✅ Loaded {len(real_articles)} real B2B Vault articles")
+                except Exception as e:
+                    print(f"⚠️  Could not load real B2B Vault data: {e}")
+                    # Fallback to demo data
+                    try:
+                        if B2B_VAULT_AVAILABLE:
+                            integration = B2BVaultIntegration()
+                            demo_articles = integration.get_demo_articles("All", 20)
+                            for article in demo_articles:
+                                db.add_b2b_article(article)
+                            print(f"✅ Loaded {len(demo_articles)} demo B2B Vault articles as fallback")
+                        else:
+                            print("⚠️  B2B Vault integration not available")
+                    except Exception as e2:
+                        print(f"⚠️  Could not load demo data either: {e2}")
+        else:
+            print(f"✅ Found {len(existing_articles)} existing B2B articles in database")
+    except Exception as e:
+        print(f"⚠️  Error during data initialization: {e}")
+
+# Initialize data when the module is imported
+initialize_data()
+
 @app.route('/')
 def index():
     """Serve the main dashboard"""
     return send_file('index.html')
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for deployment platforms"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'version': '1.0.0'
+    })
 
 @app.route('/api/ai-links')
 def get_ai_links():
@@ -1066,12 +1181,23 @@ def start_b2b_scraping():
         tags = data.get('tags', ['Sales'])
         max_articles = int(data.get('max_articles', 50))
         
-        success, message = b2b_manager.start_scraping(tags, max_articles)
+        # Check if we're in a serverless environment
+        is_serverless = os.environ.get('VERCEL') or os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER')
         
-        return jsonify({
-            'success': success,
-            'message': message
-        })
+        if is_serverless:
+            # In serverless environments, provide demo articles instead of real scraping
+            return jsonify({
+                'success': False,
+                'message': 'Real-time scraping is not available in the deployed version. The app loads curated B2B Vault articles automatically. For live scraping, please run the code locally.',
+                'info': 'This is a serverless deployment limitation. Demo articles are automatically loaded on startup.'
+            })
+        else:
+            # In local environments, allow real scraping
+            success, message = b2b_manager.start_scraping(tags, max_articles)
+            return jsonify({
+                'success': success,
+                'message': message
+            })
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
@@ -1250,47 +1376,7 @@ def get_ai_categories():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-def generate_expanded_summary(content, title, category):
-    """Generate a more detailed 4-5 sentence summary from article content"""
-    # Extract key sentences from the content
-    sentences = content.split('. ')
-    
-    # Create a 4-5 sentence summary based on the content
-    if len(sentences) >= 4:
-        # Use the first few sentences and add category-specific insights
-        summary_parts = []
-        
-        # Add the main point
-        summary_parts.append(sentences[0].strip())
-        
-        # Add supporting details
-        if len(sentences) > 1:
-            summary_parts.append(sentences[1].strip())
-        
-        # Add category-specific insights
-        if category == "AI":
-            summary_parts.append("This represents a significant shift in how AI technology is being adopted across B2B marketing and sales operations.")
-        elif category == "Sales":
-            summary_parts.append("Sales teams implementing these strategies report measurable improvements in conversion rates and deal velocity.")
-        elif category == "ABM & GTM":
-            summary_parts.append("Account-based marketing approaches like this require alignment between sales and marketing teams for maximum effectiveness.")
-        elif category == "Content Marketing":
-            summary_parts.append("Content marketing strategies must evolve to meet changing buyer expectations and consumption patterns.")
-        else:
-            summary_parts.append("This approach demonstrates the importance of strategic thinking in modern B2B marketing.")
-        
-        # Add implementation insight
-        summary_parts.append("Companies that adopt these methods early often gain significant competitive advantages in their markets.")
-        
-        # Add future outlook
-        summary_parts.append("The trend toward more sophisticated, data-driven approaches will likely accelerate as technology continues to evolve.")
-        
-        return '. '.join(summary_parts[:5]) + '.'
-    else:
-        # Fallback for short content
-        return content[:200] + "..." if len(content) > 200 else content
 
-# ...existing code...
 
 if __name__ == '__main__':
     print("🚀 Starting B2B Sales Intelligence Platform...")
@@ -1318,4 +1404,15 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"⚠️  Could not load B2B Vault data: {e}")
     
-    app.run(debug=True, port=5002)
+    # For serverless deployment (Vercel), don't run the app directly
+    # The WSGI handler will be used instead
+    if os.environ.get('VERCEL'):
+        # Running on Vercel
+        pass
+    else:
+        # Running locally
+        app.run(debug=True, port=5002)
+
+# Export the Flask app for WSGI/serverless deployment
+# This is what Vercel will import and use
+application = app

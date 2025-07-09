@@ -1,0 +1,14 @@
+# Render Blueprint
+services:
+  - type: web
+    name: ai-link-scraper
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn website.app:app --host 0.0.0.0 --port $PORT
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 10000
