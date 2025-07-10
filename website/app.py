@@ -357,91 +357,44 @@ class B2BVaultManager:
             return []
 
 def generate_expanded_summary(content, title, category):
-    """Generate a concise 275-300 word summary from article content that doesn't trail off"""
-    import re
+    """Generate a more detailed 4-5 sentence summary from article content"""
+    # Extract key sentences from the content
+    sentences = content.split('. ')
     
-    # Clean and split content into sentences
-    clean_content = re.sub(r'\s+', ' ', content.strip())
-    sentences = [s.strip() for s in clean_content.split('.') if s.strip() and len(s.strip()) > 15]
-    
-    # Target word count - slightly reduced as requested
-    target_words = 275
-    max_words = 300
-    
-    summary_parts = []
-    word_count = 0
-    
-    # Start with a more specific intro
-    intro = f"This {category.lower()} article examines {title.lower()}"
-    summary_parts.append(intro)
-    word_count += len(intro.split())
-    
-    # Add key content sentences, being more selective
-    sentences_added = 0
-    for sentence in sentences[:10]:  # Look at more sentences but be selective
-        sentence = sentence.strip()
-        if not sentence:
-            continue
-            
-        sentence_words = len(sentence.split())
-        # Reserve space for conclusion (20 words)
-        if word_count + sentence_words <= max_words - 20 and sentences_added < 6:
-            summary_parts.append(sentence + '.')
-            word_count += sentence_words
-            sentences_added += 1
-        elif word_count >= target_words - 30:  # Stop if we're close to target
-            break
-    
-    # Add category-specific insight if we have room
-    if word_count < target_words - 15:
-        if category == "AI":
-            insight = "This approach demonstrates how AI tools enhance B2B marketing effectiveness."
-        elif category == "Content Marketing":
-            insight = "The methodology addresses modern content consumption patterns and buyer behavior."
-        elif category == "ABM & GTM":
-            insight = "These tactics require precise alignment between sales and marketing operations."
-        elif category == "Product Marketing":
-            insight = "This strategy focuses on positioning and messaging that drives customer engagement."
-        else:
-            insight = "These principles represent essential components of modern B2B strategy."
+    # Create a 4-5 sentence summary based on the content
+    if len(sentences) >= 4:
+        # Use the first few sentences and add category-specific insights
+        summary_parts = []
         
-        if word_count + len(insight.split()) <= max_words - 15:
-            summary_parts.append(insight)
-            word_count += len(insight.split())
-    
-    # Add a proper conclusion that ensures we don't trail off
-    remaining_words = max_words - word_count
-    if remaining_words >= 12:
-        conclusion = "Implementation of these concepts delivers measurable business results."
-        summary_parts.append(conclusion)
-        word_count += len(conclusion.split())
-    elif remaining_words >= 8:
-        conclusion = "These methods drive sustainable growth."
-        summary_parts.append(conclusion)
-        word_count += len(conclusion.split())
-    
-    # Join all parts
-    full_summary = ' '.join(summary_parts)
-    
-    # Final check to ensure we don't exceed max words and end properly
-    words = full_summary.split()
-    if len(words) > max_words:
-        # Truncate to exactly max_words and ensure it ends with a complete sentence
-        truncated = ' '.join(words[:max_words])
-        # Find the last complete sentence
-        last_period = truncated.rfind('.')
-        if last_period > len(truncated) * 0.75:  # If the last period is in the last 25% of text
-            full_summary = truncated[:last_period + 1]
+        # Add the main point
+        summary_parts.append(sentences[0].strip())
+        
+        # Add supporting details
+        if len(sentences) > 1:
+            summary_parts.append(sentences[1].strip())
+        
+        # Add category-specific insights
+        if category == "AI":
+            summary_parts.append("This represents a significant shift in how AI technology is being adopted across B2B marketing and sales operations.")
+        elif category == "Sales":
+            summary_parts.append("Sales teams implementing these strategies report measurable improvements in conversion rates and deal velocity.")
+        elif category == "ABM & GTM":
+            summary_parts.append("Account-based marketing approaches like this require alignment between sales and marketing teams for maximum effectiveness.")
+        elif category == "Content Marketing":
+            summary_parts.append("Content marketing strategies must evolve to meet changing buyer expectations and consumption patterns.")
         else:
-            # Create a proper ending by trimming and adding conclusion
-            safe_end = ' '.join(words[:max_words - 8]) + " for sustainable business growth."
-            full_summary = safe_end
-    
-    # Ensure it ends with proper punctuation
-    if not full_summary.endswith('.'):
-        full_summary += '.'
-    
-    return full_summary
+            summary_parts.append("This approach demonstrates the importance of strategic thinking in modern B2B marketing.")
+        
+        # Add implementation insight
+        summary_parts.append("Companies that adopt these methods early often gain significant competitive advantages in their markets.")
+        
+        # Add future outlook
+        summary_parts.append("The trend toward more sophisticated, data-driven approaches will likely accelerate as technology continues to evolve.")
+        
+        return '. '.join(summary_parts[:5]) + '.'
+    else:
+        # Fallback for short content
+        return content[:200] + "..." if len(content) > 200 else content
 
 def scrape_b2b_vault():
     """Scrape real articles from B2B Vault website"""
