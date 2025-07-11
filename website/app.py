@@ -1452,3 +1452,18 @@ if __name__ == '__main__':
 # Export the Flask app for WSGI/serverless deployment
 # This is what Vercel will import and use
 application = app
+
+
+
+
+
+#parts predictor pipeline
+
+
+#planning paper for 2 months
+#Dhiraj said that Arjan should get acquainted with the parts predictor pipeline. He suggested that the best way for Arjan to do this would be to get ready with testing so that he understands the scope. Dhiraj mentioned that after this, they could talk further about Arjan's involvement in the project.
+#what are work orders
+#a no would be not showing up or really low
+#
+
+#planning paper for 2 months
