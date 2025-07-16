@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 import time
 import requests
 import logging
@@ -23,8 +24,12 @@ from voting_system import VotingSystem
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+
+# Load environment variables from .env
+load_dotenv()
+
 # Config
-PERPLEXITY_API_KEY = "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"
+PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY")
 BASE_URL = "https://www.theb2bvault.com/"
 REPORT_FILENAME = "b2b_vault_report.pdf"
 
