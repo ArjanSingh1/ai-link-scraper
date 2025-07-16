@@ -31,15 +31,20 @@ def main():
 
     # Fetch messages from the channel
     messages = slack.get_channel_messages(limit=args.limit)
-    if args.verbose:
-        print(f"Fetched {len(messages)} messages from channel {args.channel}")
+    print(f"[DEBUG] Fetched {len(messages)} messages from channel {args.channel}")
+    if not messages:
+        print("[ERROR] No messages found in the channel. Check SLACK_CHANNEL_ID and bot permissions.")
+        return
 
     # Extract unique links
     unique_links = slack.extract_unique_links_from_messages(messages)
-    if args.verbose:
-        print(f"Found {len(unique_links)} unique links in channel")
+    print(f"[DEBUG] Found {len(unique_links)} unique links in channel")
+    if not unique_links:
+        print("[ERROR] No links found in channel messages. Nothing to scrape.")
+        return
 
     # Summarize and save each link
+    saved_count = 0
     for link_data in unique_links:
         url = link_data['url']
         print(f"Scraping: {url}")
@@ -57,12 +62,19 @@ def main():
             )
             save_summary_to_file(summary_data, 'summaries')
             print(f"✅ Saved summary for: {url}")
+            saved_count += 1
         else:
             print(f"❌ Failed to scrape: {url}")
+
+    print(f"[DEBUG] Total summaries saved: {saved_count}")
+    if saved_count == 0:
+        print("[ERROR] No summaries were saved. Check scraping and summarization logic.")
+        return
 
     # Generate/update website HTML dashboard
     from src.generate_website import generate_website_from_summaries
     generate_website_from_summaries('summaries', 'website/index.html')
+    print("[DEBUG] Website/index.html updated.")
 
 if __name__ == "__main__":
     main()
