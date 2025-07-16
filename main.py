@@ -60,14 +60,9 @@ def main():
         else:
             print(f"❌ Failed to scrape: {url}")
 
-    # Generate/update website (markdown collection)
-    shared_md = create_shared_summary_folder('summaries')
-    if shared_md:
-        if args.verbose:
-            print(f"Website/markdown summary updated: {shared_md}")
-    else:
-        if args.verbose:
-            print("No summaries found to update website.")
+    # Generate/update website HTML dashboard
+    from src.generate_website import generate_website_from_summaries
+    generate_website_from_summaries('summaries', 'website/index.html')
 
 if __name__ == "__main__":
     main()
