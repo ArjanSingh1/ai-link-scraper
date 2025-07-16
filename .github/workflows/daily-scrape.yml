@@ -25,7 +25,8 @@ jobs:
           echo "SLACK_BOT_TOKEN=${{ secrets.SLACK_BOT_TOKEN }}" >> .env
           echo "SLACK_CHANNEL_ID=${{ secrets.SLACK_CHANNEL_ID }}" >> .env
           echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+          echo "PERPLEXITY_API_KEY=${{ secrets.PERPLEXITY_API_KEY }}" >> .env
           echo "SUMMARY_MAX_LENGTH=500" >> .env
-      - name: Run daily scheduler
+      - name: Run B2B Vault Scraper
         run: |
-          python daily_scheduler.py --run-now
+          python src/B2Bscraper.py --preview
