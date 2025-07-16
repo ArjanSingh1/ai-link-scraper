@@ -145,12 +145,7 @@ The credentials are saved in `config/token.json` and will be reused automaticall
 
 ## 🔗 Integration with Existing Workflows
 
-### With Daemon Mode
 
-```bash
-# Run daemon with Google Drive export
-python daemon.py --export-to-drive  # (coming soon)
-```
 
 ### With Slack Bot
 

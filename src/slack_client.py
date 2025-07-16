@@ -884,3 +884,36 @@ class SlackClient:
         except Exception as e:
             logger.error(f"Error checking thread for mentions: {str(e)}")
             return 0
+    
+    def get_daily_messages(self, target_date=None):
+        """Get messages for a specific day (default: yesterday)"""
+        if target_date is None:
+            target_date = datetime.now() - timedelta(days=1)
+            
+        # Calculate exact day boundaries
+        start_date = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_date = target_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        logger.info(f"Fetching messages for {start_date.strftime('%Y-%m-%d')}")
+        
+        return self.get_channel_messages(start_date=start_date, end_date=end_date)
+    
+    def extract_unique_links_from_messages(self, messages, existing_urls=None):
+        """Extract links from messages, filtering out duplicates"""
+        if existing_urls is None:
+            existing_urls = set()
+            
+        links_data = self.extract_links_from_messages(messages)
+        
+        # Filter out existing URLs
+        unique_links = []
+        new_urls = set()
+        
+        for link_data in links_data:
+            url = link_data.get('url')
+            if url and url not in existing_urls and url not in new_urls:
+                unique_links.append(link_data)
+                new_urls.add(url)
+                
+        logger.info(f"Found {len(unique_links)} unique links out of {len(links_data)} total")
+        return unique_links

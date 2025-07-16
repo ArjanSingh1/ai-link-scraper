@@ -12,13 +12,10 @@ python setup.py
 
 # Verify setup
 python test_setup.py
-```
 
 ### Step 2: Configure API Keys
-Edit the `.env` file with your credentials:
 
 ```env
-# Get these from https://api.slack.com/apps
 SLACK_BOT_TOKEN=xoxb-your-actual-token
 SLACK_CHANNEL_ID=C1234567890
 
@@ -26,79 +23,55 @@ SLACK_CHANNEL_ID=C1234567890
 OPENAI_API_KEY=sk-your-actual-key
 ```
 
-### Step 3: Run the Scraper
 ```bash
 # Basic usage - scrape links from last 7 days
-python main.py
-
 # Scrape ALL historical links (no limits)
 python main.py --max-links 99999 --limit 99999
 
 # Send summaries back to Slack as messages (shorter format)
 python main.py --send-to-slack
-
 # Upload summary files to Slack
 python main.py --upload-to-slack
-
-# Send a digest of recent summaries to Slack
-python main.py --share-digest
 
 # Share ALL summaries in one organized file
 python main.py --share-all-summaries
 
 # Complete workflow: scrape, summarize, and share everything
-python main.py --send-to-slack --share-all-summaries --verbose
 
 # NEW: Check for mentions and respond immediately
-python main.py --check-mentions              # Check configured channel only
-python main.py --check-all-channels         # Check ALL accessible channels
-
 # NEW: Scrape all links to Google Drive (no AI summarization)
 python main.py --scrape-to-drive             # Export all recent links as CSV/JSON/HTML
 python main.py --scrape-to-drive --drive-folder-name "Weekly Export"
 ```
 
-## 🔄 Persistent Daemon Mode (NEW!)
 
 Instead of relying only on scheduled GitHub Actions, you can now run a **persistent daemon** that continuously monitors for mentions!
-
 ### Quick Setup:
 ```bash
 # Test daemon functionality
-python daemon.py --test
-
-# Run daemon manually (for testing)
-python daemon.py --interval 60 --verbose
-
 # Automated setup for your platform
 python setup_daemon.py
 ```
 
 ### Deployment Options:
 
-#### 🍎 **macOS (LaunchAgent)**
 ```bash
 # Automatic setup
-python setup_daemon.py --mode launchd
 
 # Manual commands after setup
-launchctl start com.user.ai-link-scraper-daemon
 launchctl stop com.user.ai-link-scraper-daemon
 ```
 
 #### 🐧 **Linux (Systemd)**
 ```bash
-# Automatic setup
 python setup_daemon.py --mode systemd
 
-# Manual commands after setup
 systemctl --user start ai-link-scraper-daemon
 systemctl --user status ai-link-scraper-daemon
-journalctl --user -u ai-link-scraper-daemon -f
 ```
 
-#### 🐳 **Docker (Any Platform)**
 ```bash
+
 # Automatic setup
 python setup_daemon.py --mode docker
 
