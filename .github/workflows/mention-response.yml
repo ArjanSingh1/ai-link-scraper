@@ -1,8 +1,8 @@
-name: AI Link Scraper - Mention Response
+name: AI Link Scraper - All Message Scraper
 
 on:
   schedule:
-    # Check for mentions every 10 minutes (1:00, 1:10, 1:20, 1:30, etc.)
+    # Scrape all messages every 10 minutes (1:00, 1:10, 1:20, 1:30, etc.)
     - cron: '*/10 * * * *'
   workflow_dispatch: # Manual trigger
   repository_dispatch:
@@ -29,20 +29,20 @@ jobs:
     - name: Create logs directory
       run: mkdir -p logs
     
-    - name: Check for mentions across all channels
+    - name: Scrape all messages across all channels
       env:
         SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        echo "Checking for mentions across all accessible channels..."
+        echo "Scraping all messages across all accessible channels..."
         python main.py --check-all-channels --verbose
-        echo "Mention check completed!"
+        echo "All message scraping completed!"
     
     - name: Upload logs
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: mention-check-logs-${{ github.run_number }}
+        name: all-message-scrape-logs-${{ github.run_number }}
         path: logs/
         retention-days: 7

@@ -21,6 +21,8 @@ jobs:
           pip install tqdm
           pip install schedule
           pip install -r requirements.txt || true
+      - name: Install Playwright browsers
+        run: playwright install
       - name: Set up environment variables
         run: |
           echo "SLACK_BOT_TOKEN=${{ secrets.SLACK_BOT_TOKEN }}" >> .env
